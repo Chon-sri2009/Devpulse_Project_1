@@ -1,0 +1,69 @@
+﻿@page "/spotify"
+@using Microsoft.AspNetCore.Components.Authorization
+@rendermode InteractiveServer
+
+<PageTitle>Spotify Player | DevPulse</PageTitle>
+
+<div class="spotify-page">
+    <section class="spotify-hero">
+        <p class="eyebrow">Spotify integration</p>
+        <h1>Your music, connected.</h1>
+        <p>
+            Connect Spotify to view and control playback on your active device.
+        </p>
+    </section>
+
+    <AuthorizeView>
+        <Authorized Context="authState">
+            <section class="spotify-card">
+                <span class="spotify-mark">♫</span>
+
+                <div>
+                    <p class="connection-label">Spotify connected</p>
+                    <h2>Welcome, @authState.User.Identity?.Name</h2>
+                    <p>
+                        Your player controls will appear here in the next step.
+                    </p>
+                </div>
+
+                <div class="spotify-actions">
+                    <a class="spotify-button secondary-button"
+                       href="https://open.spotify.com/"
+                       target="_blank"
+                       rel="noopener">
+                        Open Spotify
+                    </a>
+
+                    <a class="spotify-button disconnect-button"
+                       href="spotify/logout">
+                        Disconnect
+                    </a>
+                </div>
+            </section>
+        </Authorized>
+
+        <NotAuthorized>
+            <section class="spotify-card">
+                <span class="spotify-mark">♫</span>
+
+                <div>
+                    <p class="connection-label">Connect your account</p>
+                    <h2>Spotify Player</h2>
+                    <p>
+                        Sign in with Spotify to control your own active
+                        Spotify device from DevPulse.
+                    </p>
+                </div>
+
+                <a class="spotify-button connect-button"
+                   href="spotify/login">
+                    Connect Spotify
+                </a>
+            </section>
+        </NotAuthorized>
+
+        <Authorizing>
+            <p class="loading-message">Checking Spotify connection...</p>
+        </Authorizing>
+    </AuthorizeView>
+</div>

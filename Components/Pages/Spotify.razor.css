@@ -1,0 +1,128 @@
+﻿.spotify-page {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+.spotify-hero {
+    max-width: 680px;
+}
+
+.eyebrow {
+    margin: 0 0 8px;
+    color: #1d9a59;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.spotify-hero h1 {
+    margin: 0;
+    color: #172033;
+    font-size: clamp(2rem, 4vw, 2.8rem);
+    letter-spacing: -0.045em;
+}
+
+.spotify-hero p:last-child {
+    margin: 12px 0 0;
+    color: #62718a;
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+.spotify-card {
+    max-width: 780px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 20px;
+    padding: 28px;
+    border: 1px solid #d9eee1;
+    border-radius: 18px;
+    background: #ffffff;
+    box-shadow: 0 10px 28px rgba(27, 39, 70, 0.05);
+}
+
+.spotify-mark {
+    width: 56px;
+    height: 56px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    background: #1db954;
+    color: #ffffff;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.connection-label {
+    margin: 0 0 5px;
+    color: #1d9a59;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.spotify-card h2 {
+    margin: 0;
+    color: #172033;
+    font-size: 1.25rem;
+}
+
+.spotify-card p:last-child {
+    margin: 7px 0 0;
+    color: #66758e;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.spotify-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.spotify-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 9px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.connect-button {
+    background: #1db954;
+    color: #ffffff;
+}
+
+.secondary-button {
+    background: #edf2f9;
+    color: #34435e;
+}
+
+.disconnect-button {
+    background: #fff0f0;
+    color: #b92f2f;
+}
+
+.loading-message {
+    color: #66758e;
+}
+
+@media (max-width: 700px) {
+    .spotify-card {
+        grid-template-columns: auto 1fr;
+    }
+
+    .spotify-actions,
+    .connect-button {
+        grid-column: span 2;
+    }
+}
