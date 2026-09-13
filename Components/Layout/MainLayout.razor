@@ -1,0 +1,31 @@
+﻿@inherits LayoutComponentBase
+
+<div class="app-shell">
+    <aside class="app-sidebar">
+        <NavMenu />
+    </aside>
+
+    <main class="app-main">
+        <header class="app-header">
+            <div class="workspace-context">
+                <span class="workspace-label">Workspace</span>
+                <strong>DevPulse</strong>
+            </div>
+
+            <div class="environment-status">
+                <span class="status-dot"></span>
+                Local development
+            </div>
+        </header>
+
+        <section class="app-content">
+            @Body
+        </section>
+    </main>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>

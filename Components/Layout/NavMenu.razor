@@ -1,0 +1,51 @@
+﻿<div class="brand-row">
+    <a class="brand-link" href="dashboard">
+        <span class="brand-mark">DP</span>
+
+        <span class="brand-copy">
+            <strong>DevPulse</strong>
+            <small>Diagnostics platform</small>
+        </span>
+    </a>
+
+    <label for="nav-toggle" class="navbar-toggler" aria-label="Toggle navigation">
+        <span></span>
+    </label>
+</div>
+
+<input id="nav-toggle" type="checkbox" class="nav-toggle" />
+
+<div class="nav-scrollable"
+     onclick="document.querySelector('.nav-toggle').click()">
+    <nav class="nav-menu">
+        <p class="nav-section-label">Workspace</p>
+
+        <NavLink class="nav-link" href="dashboard">
+            <span class="nav-icon" aria-hidden="true">⌂</span>
+            Overview
+        </NavLink>
+
+        <p class="nav-section-label tools-label">Available tools</p>
+
+        <div class="tool-summary">
+            <span class="tool-summary-dot"></span>
+            <span>API health check</span>
+        </div>
+
+        <div class="tool-summary">
+            <span class="tool-summary-dot"></span>
+            <span>System monitoring</span>
+        </div>
+
+        <div class="tool-summary">
+            <span class="tool-summary-dot"></span>
+            <span>Disk storage</span>
+        </div>
+    </nav>
+
+    <div class="sidebar-footer">
+        <span class="footer-status-dot"></span>
+        Local workspace active
+    </div>
+</div>
+

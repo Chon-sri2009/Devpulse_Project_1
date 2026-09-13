@@ -1,0 +1,130 @@
+.app-shell {
+    min-height: 100vh;
+    display: flex;
+    background: #f4f7fb;
+    color: #172033;
+}
+
+.app-sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    background: #111b31;
+    color: #ffffff;
+}
+
+.app-main {
+    min-width: 0;
+    flex: 1;
+}
+
+.app-header {
+    min-height: 72px;
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #ffffff;
+    border-bottom: 1px solid #e3e8f0;
+}
+
+.workspace-context {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.workspace-label {
+    color: #718096;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.workspace-context strong {
+    color: #172033;
+    font-size: 1rem;
+}
+
+.environment-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: #ecfdf3;
+    color: #167343;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #22c55e;
+}
+
+.app-content {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 32px;
+}
+
+#blazor-error-ui {
+    color-scheme: light only;
+    background: #fff4d6;
+    bottom: 0;
+    box-shadow: 0 -1px 3px rgba(15, 23, 42, 0.18);
+    box-sizing: border-box;
+    display: none;
+    left: 0;
+    padding: 0.75rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+    #blazor-error-ui .dismiss {
+        cursor: pointer;
+        position: absolute;
+        right: 0.75rem;
+        top: 0.5rem;
+    }
+
+@media (min-width: 641px) {
+    .app-sidebar {
+        height: 100vh;
+        position: sticky;
+        top: 0;
+    }
+
+    .app-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+}
+
+@media (max-width: 640.98px) {
+    .app-shell {
+        flex-direction: column;
+    }
+
+    .app-sidebar {
+        width: 100%;
+    }
+
+    .app-header {
+        min-height: 64px;
+        padding: 0 20px;
+    }
+
+    .app-content {
+        padding: 24px 20px;
+    }
+
+    .environment-status {
+        font-size: 0.75rem;
+    }
+}
