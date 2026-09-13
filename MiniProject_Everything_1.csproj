@@ -7,9 +7,6 @@
     <UserSecretsId>302ef823-f5b8-412b-9454-a94988e0aa7c</UserSecretsId>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Content Include="Components\Pages\Spotify.razor.css" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="System.Management" Version="10.0.12" />
