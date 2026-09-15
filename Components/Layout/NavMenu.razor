@@ -1,55 +1,19 @@
-﻿<div class="brand-row">
-    <a class="brand-link" href="dashboard">
-        <span class="brand-mark">DP</span>
-
-        <span class="brand-copy">
-            <strong>DevPulse</strong>
-            <small>Diagnostics platform</small>
-        </span>
-    </a>
-
-    <label for="nav-toggle" class="navbar-toggler" aria-label="Toggle navigation">
-        <span></span>
-    </label>
+<div class="brand-row">
+    <a class="brand-link" href="/"><span class="brand-mark">DP</span><span class="brand-copy"><strong>DevPulse</strong><small>Diagnostics platform</small></span></a>
+    <label for="nav-toggle" class="navbar-toggler">Menu</label>
 </div>
-
-<input id="nav-toggle" type="checkbox" class="nav-toggle" />
-
-<div class="nav-scrollable"
-     onclick="document.querySelector('.nav-toggle').click()">
+<input id="nav-toggle" type="checkbox" class="nav-toggle" aria-label="Toggle navigation" />
+<div class="nav-scrollable">
     <nav class="nav-menu">
         <p class="nav-section-label">Workspace</p>
-
-        <NavLink class="nav-link" href="dashboard">
-            <span class="nav-icon" aria-hidden="true">⌂</span>
-            Overview
-        </NavLink>
-
+        <NavLink class="nav-link" href="/" Match="NavLinkMatch.All"><span class="nav-icon" aria-hidden="true">⌂</span>Overview</NavLink>
+        <NavLink class="nav-link" href="spotify"><span class="nav-icon" aria-hidden="true">♫</span>Spotify Player</NavLink>
         <p class="nav-section-label tools-label">Available tools</p>
-
-        <div class="tool-summary">
-            <span class="tool-summary-dot"></span>
-            <span>API health check</span>
-        </div>
-
-        <div class="tool-summary">
-            <span class="tool-summary-dot"></span>
-            <span>System monitoring</span>
-        </div>
-
-        <div class="tool-summary">
-            <span class="tool-summary-dot"></span>
-            <span>Disk storage</span>
-        </div>
+        <div class="tool-summary"><span class="tool-summary-dot"></span><span>API health check</span></div>
+        <div class="tool-summary"><span class="tool-summary-dot"></span><span>System monitoring</span></div>
+        <div class="tool-summary"><span class="tool-summary-dot"></span><span>Disk and folder storage</span></div>
+        <div class="tool-summary"><span class="tool-summary-dot"></span><span>Local port scanner</span></div>
     </nav>
-
-    <div class="sidebar-footer">
-        <span class="footer-status-dot"></span>
-        Local workspace active
-    </div>
-    <NavLink class="nav-link" href="spotify">
-        <span class="nav-icon" aria-hidden="true">♫</span>
-        Spotify Player
-    </NavLink>
+    <div class="sidebar-footer"><span class="footer-status-dot"></span>Application host diagnostics</div>
 </div>
 

@@ -1,0 +1,24 @@
+name: Build and verify
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - run: dotnet restore MiniProject_Everything_1.csproj
+      - run: dotnet build MiniProject_Everything_1.csproj -c Release --no-restore
+      - run: dotnet run --project tests/DevPulse.Tests/DevPulse.Tests.csproj -c Release
+      - run: dotnet format MiniProject_Everything_1.csproj --verify-no-changes --no-restore
+      - run: dotnet publish MiniProject_Everything_1.csproj -c Release --no-restore -o artifacts/publish
+      - shell: pwsh
+        run: ./scripts/Smoke-Test.ps1

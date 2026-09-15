@@ -16,7 +16,7 @@ public sealed class SystemMetricsService
     }
 
 
-public LiveSystemMetricsResult GetLiveMetrics()
+    public LiveSystemMetricsResult GetLiveMetrics()
     {
         using var process = Process.GetCurrentProcess();
         process.Refresh();

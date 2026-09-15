@@ -1,9 +1,12 @@
-﻿bin/
+bin/
 obj/
 .vs/
 *.user
 *.suo
 *.userosscache
 *.sln.docstates
-
 appsettings.Production.json
+data/
+artifacts/
+TestResults/
+.env

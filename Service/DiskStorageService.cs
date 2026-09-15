@@ -1,33 +1,27 @@
-﻿namespace MiniProject_Everything_1.Services;
+namespace MiniProject_Everything_1.Services;
 
-public sealed class DiskStorageService
+public sealed class DiskStorageService(ILogger<DiskStorageService> logger)
 {
     public IReadOnlyList<DriveStorageResult> GetReadyDrives()
     {
-        return DriveInfo.GetDrives()
-            .Where(drive => drive.IsReady)
-            .Select(drive =>
+        var results = new List<DriveStorageResult>();
+        foreach (var drive in DriveInfo.GetDrives())
+        {
+            try
             {
-                double totalGb = drive.TotalSize / 1024.0 / 1024.0 / 1024.0;
-                double freeGb = drive.TotalFreeSpace / 1024.0 / 1024.0 / 1024.0;
-                double usedGb = totalGb - freeGb;
-
-                return new DriveStorageResult(
-                    drive.Name,
-                    drive.DriveFormat,
-                    Math.Round(totalGb, 2),
-                    Math.Round(usedGb, 2),
-                    Math.Round(freeGb, 2),
-                    Math.Round(usedGb / totalGb * 100, 1));
-            })
-            .ToList();
+                if (!drive.IsReady) continue;
+                long total = drive.TotalSize;
+                if (total <= 0) continue;
+                long free = Math.Clamp(drive.TotalFreeSpace, 0, total);
+                double gb = 1024.0 * 1024 * 1024;
+                results.Add(new(drive.Name, drive.DriveFormat, Math.Round(total / gb, 2),
+                    Math.Round((total - free) / gb, 2), Math.Round(free / gb, 2),
+                    Math.Clamp(Math.Round((total - free) * 100.0 / total, 1), 0, 100)));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            { logger.LogDebug("Skipped an unavailable drive: {ExceptionType}", ex.GetType().Name); }
+        }
+        return results;
     }
 }
-
-public record DriveStorageResult(
-    string DriveName,
-    string Format,
-    double TotalGb,
-    double UsedGb,
-    double FreeGb,
-    double UsedPercentage);
+public record DriveStorageResult(string DriveName, string Format, double TotalGb, double UsedGb, double FreeGb, double UsedPercentage);

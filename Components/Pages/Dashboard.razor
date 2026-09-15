@@ -1,380 +1,211 @@
-﻿@page "/dashboard"
+@page "/"
+@page "/dashboard"
+@using System.Globalization
 @using MiniProject_Everything_1.Services
 @inject ApiHealthCheckService HealthChecker
 @inject SystemMetricsService MetricsService
-@inject ComputerInformationService ComputerInformationService
-@inject DiskStorageService DiskStorageService
-@rendermode InteractiveServer
-@implements IDisposable
+@inject ComputerInformationService ComputerService
+@inject DiskStorageService DiskService
 @inject TcpPortScannerService PortScanner
-
+@inject FolderScanService FolderScanner
+@inject DiagnosticsSettings Settings
+@inject ILogger<Dashboard> Logger
+@rendermode InteractiveServer
+@implements IAsyncDisposable
 <PageTitle>DevPulse Dashboard</PageTitle>
-
 <div class="dashboard-page">
     <section class="dashboard-hero">
-        <div>
-            <p class="eyebrow">Operations overview</p>
-            <h1>System diagnostics, in one place.</h1>
-            <p class="hero-description">
-                Monitor local services, server-process health, hardware, and storage.
-            </p>
-        </div>
-
-        <div class="environment-card">
-            <span class="environment-indicator"></span>
-            <div>
-                <strong>Local environment</strong>
-                <small>Diagnostics run on this computer</small>
-            </div>
-        </div>
+        <div><p class="eyebrow">Operations overview</p><h1>System diagnostics, in one place.</h1>
+            <p class="hero-description">Monitor services, process health, hardware, and storage on the server running DevPulse.</p></div>
+        <div class="environment-card"><span class="environment-indicator"></span><div><strong>Application host</strong><small>Metrics describe the DevPulse server</small></div></div>
     </section>
-
-    <section class="feature-grid">
-        <article class="dashboard-card">
-            <div class="card-heading">
-                <span class="tool-mark blue-mark">AP</span>
-                <div>
-                    <h2>API Health Check</h2>
-                    <p>Check service availability and response time.</p>
-                </div>
-            </div>
-
-            <button class="btn primary-action"
-                    @onclick="RunHealthCheck"
-                    disabled="@isChecking">
-                @(isChecking ? "Checking service..." : "Run health check")
-            </button>
-
-            @if (healthResult is not null)
-            {
-                <div class="result-panel @(healthResult.IsReachable ? "result-success" : "result-error")">
-                    @if (healthResult.IsReachable)
-                    {
-                        <span>GitHub API</span>
-                        <strong>@healthResult.StatusCode @healthResult.Status</strong>
-                        <small>@healthResult.LatencyMs ms response time</small>
-                    }
-                    else
-                    {
-                        <span>Check failed</span>
-                        <strong>@healthResult.ErrorMessage</strong>
-                    }
-                </div>
-            }
-        </article>
-
-        <article class="dashboard-card">
-            <div class="card-heading">
-                <span class="tool-mark purple-mark">SM</span>
-                <div>
-                    <h2>Server Process</h2>
-                    <p>Inspect the DevPulse process at this moment.</p>
-                </div>
-            </div>
-
-            <button class="btn secondary-action"
-                    @onclick="LoadSystemMetrics"
-                    disabled="@isLoadingMetrics">
-                @(isLoadingMetrics ? "Loading metrics..." : "Refresh metrics")
-            </button>
-
-            @if (systemMetrics is not null)
-            {
-                <div class="metric-list">
-                    <div>
-                        <span>Process ID</span>
-                        <strong>@systemMetrics.ProcessId</strong>
-                    </div>
-                    <div>
-                        <span>Memory</span>
-                        <strong>@systemMetrics.MemoryMb MB</strong>
-                    </div>
-                    <div>
-                        <span>Threads</span>
-                        <strong>@systemMetrics.ActiveThreads</strong>
-                    </div>
-                </div>
-            }
-        </article>
-
-        <article class="dashboard-card">
-            <div class="card-heading">
-                <span class="tool-mark green-mark">LM</span>
-                <div>
-                    <h2>Live Monitor</h2>
-                    <p>Track server-process metrics once per second.</p>
-                </div>
-            </div>
-
-            @if (!isMonitoring)
-            {
-                <button class="btn success-action" @onclick="StartLiveMonitor">
-                    Start monitoring
-                </button>
-            }
-            else
-            {
-                <button class="btn danger-action" @onclick="StopLiveMonitor">
-                    Stop monitoring
-                </button>
-            }
-
-            @if (liveMetrics is not null)
-            {
-                <div class="metric-list live-metric-list">
-                    <div>
-                        <span>Working memory</span>
-                        <strong>@liveMetrics.WorkingMemoryMb MB</strong>
-                    </div>
-                    <div>
-                        <span>Paged memory</span>
-                        <strong>@liveMetrics.PagedMemoryMb MB</strong>
-                    </div>
-                    <div>
-                        <span>Threads</span>
-                        <strong>@liveMetrics.ActiveThreads</strong>
-                    </div>
-                </div>
-
-                <small class="updated-time">
-                    Updated @liveMetrics.CheckedAt.ToString("HH:mm:ss")
-                </small>
-            }
-        </article>
-
-        <article class="dashboard-card computer-card">
-            <div class="card-heading">
-                <span class="tool-mark orange-mark">PC</span>
-                <div>
-                    <h2>Computer Information</h2>
-                    <p>View the Windows and hardware details of this computer.</p>
-                </div>
-            </div>
-
-            <button class="btn secondary-action"
-                    @onclick="LoadComputerInformation">
-                Load computer information
-            </button>
-
-            @if (computerInformation is not null)
-            {
-                @if (computerInformation.ErrorMessage is not null)
+    @if (!Settings.Enabled)
+    {
+        <section class="dashboard-card"><h2>Host diagnostics are disabled</h2><p>The app owner has not enabled host diagnostics for this deployment.</p><a href="/spotify">Go to Spotify Player</a></section>
+    }
+    else
+    {
+        @if (error is not null) { <p role="alert" class="error-message">@error</p> }
+        <section class="feature-grid">
+            <article class="dashboard-card">
+                <div class="card-heading"><span class="tool-mark blue-mark">AP</span><div><h2>API Health Check</h2><p>Check GitHub availability from the server.</p></div></div>
+                <button class="btn primary-action" disabled="@busy" @onclick="RunHealthCheck">@(operation == "health" ? "Checking service…" : "Run health check")</button>
+                @if (healthResult is not null)
                 {
-                    <p class="error-message">@computerInformation.ErrorMessage</p>
+                    <div role="status" class="result-panel @(healthResult.IsReachable ? "result-success" : "result-error")">
+                        <span>GitHub API</span><strong>@healthResult.StatusCode @healthResult.Status</strong><small>@healthResult.LatencyMs ms response time</small>
+                        @if (healthResult.ErrorMessage is not null) { <p>@healthResult.ErrorMessage</p> }
+                    </div>
                 }
+            </article>
+            <article class="dashboard-card">
+                <div class="card-heading"><span class="tool-mark purple-mark">SM</span><div><h2>Server Process</h2><p>Inspect the DevPulse process.</p></div></div>
+                <button class="btn secondary-action" disabled="@busy" @onclick="LoadSystemMetrics">Refresh metrics</button>
+                @if (systemMetrics is not null)
+                {
+                    <div class="metric-list"><div><span>Process ID</span><strong>@systemMetrics.ProcessId</strong></div><div><span>Memory</span><strong>@systemMetrics.MemoryMb MB</strong></div><div><span>Threads</span><strong>@systemMetrics.ActiveThreads</strong></div></div>
+                }
+            </article>
+            <article class="dashboard-card">
+                <div class="card-heading"><span class="tool-mark green-mark">LM</span><div><h2>Live Monitor</h2><p>Server-process metrics once per second.</p></div></div>
+                @if (monitorTask is null) { <button class="btn success-action" @onclick="StartLiveMonitor">Start monitoring</button> }
+                else { <button class="btn danger-action" @onclick="StopLiveMonitor">Stop monitoring</button> }
+                @if (liveMetrics is not null)
+                {
+                    <div class="metric-list live-metric-list"><div><span>Working memory</span><strong>@liveMetrics.WorkingMemoryMb MB</strong></div><div><span>Paged memory</span><strong>@liveMetrics.PagedMemoryMb MB</strong></div><div><span>Threads</span><strong>@liveMetrics.ActiveThreads</strong></div></div>
+                    <small class="updated-time">Updated @liveMetrics.CheckedAt.ToString("HH:mm:ss") (server time)</small>
+                }
+            </article>
+            <article class="dashboard-card computer-card">
+                <div class="card-heading"><span class="tool-mark orange-mark">PC</span><div><h2>Host Information</h2><p>Operating system and hardware available to this server.</p></div></div>
+                <button class="btn secondary-action" disabled="@busy" @onclick="LoadComputerInformation">@(operation == "computer" ? "Loading host information…" : "Load host information")</button>
+                @if (computerInformation is not null)
+                {
+                    @if (computerInformation.ErrorMessage is not null) { <p role="status">@computerInformation.ErrorMessage</p> }
+                    <div class="computer-details">
+                        <div><span>Host</span><strong>@computerInformation.ComputerName</strong></div>
+                        <div><span>Operating system</span><strong title="@computerInformation.OperatingSystem">@computerInformation.OperatingSystem</strong></div>
+                        <div><span>Processor / architecture</span><strong title="@computerInformation.CpuName">@computerInformation.CpuName</strong></div>
+                        <div><span>Logical processors</span><strong>@computerInformation.LogicalProcessorCount</strong></div>
+                        <div><span>@computerInformation.MemoryLabel</span><strong>@computerInformation.TotalMemoryGb GB</strong></div>
+                    </div>
+                }
+            </article>
+            <article class="dashboard-card storage-card">
+                <div class="card-heading"><span class="tool-mark red-mark">DS</span><div><h2>Disk Storage</h2><p>Capacity of ready drives visible to the host.</p></div></div>
+                <button class="btn secondary-action" disabled="@busy" @onclick="LoadDiskStorage">Refresh storage</button>
+                @if (drives is not null)
+                {
+                    @if (drives.Count == 0) { <p role="status">No readable, ready drives were found.</p> }
+                    <div class="drive-list">
+                        @foreach (var drive in drives)
+                        {
+                            <div class="drive-item">
+                                <div class="drive-heading"><div><strong>@drive.DriveName</strong><span>@drive.Format</span></div><strong>@drive.UsedPercentage% used</strong></div>
+                                <div class="drive-progress" role="progressbar" aria-label="@($"Used space on {drive.DriveName}")" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@drive.UsedPercentage.ToString(CultureInfo.InvariantCulture)">
+                                    <div style="@($"width: {drive.UsedPercentage.ToString("F1", CultureInfo.InvariantCulture)}%")"></div></div>
+                                <div class="drive-footer"><span>@drive.UsedGb GB used</span><span>@drive.FreeGb GB free of @drive.TotalGb GB</span></div>
+                            </div>
+                        }
+                    </div>
+                }
+            </article>
+            <article class="dashboard-card scanner-card">
+                <div class="card-heading"><span class="tool-mark blue-mark">TCP</span><div><h2>Local Port Scanner</h2><p>Common development ports on the server's IPv4 loopback interface.</p></div></div>
+                <button class="btn secondary-action" disabled="@busy" @onclick="ScanLocalPorts">@(operation == "ports" ? "Scanning localhost…" : "Scan localhost")</button>
+                @if (ports is not null)
+                {
+                    <div class="scan-result-list">
+                        @foreach (var port in ports)
+                        {
+                            <div class="scan-result"><div><strong>Port @port.Port</strong><span>@port.Service</span></div><span class="port-status @(port.IsOpen ? "port-open" : "port-closed")">@port.Status</span></div>
+                        }
+                    </div>
+                }
+            </article>
+            <article class="dashboard-card folder-card">
+                <div class="card-heading"><span class="tool-mark orange-mark">FS</span><div><h2>Folder Usage</h2><p>Largest folders inside the configured scan root.</p></div></div>
+                @if (!FolderScanner.IsConfigured) { <p>No scan folder has been configured by the app owner.</p> }
                 else
                 {
-                    <div class="computer-details">
-                        <div>
-                            <span>Computer</span>
-                            <strong>@computerInformation.ComputerName</strong>
-                        </div>
-                        <div>
-                            <span>Windows</span>
-                            <strong>@computerInformation.OperatingSystem</strong>
-                        </div>
-                        <div>
-                            <span>Processor</span>
-                            <strong>@computerInformation.CpuName</strong>
-                        </div>
-                        <div>
-                            <span>Logical processors</span>
-                            <strong>@computerInformation.LogicalProcessorCount</strong>
-                        </div>
-                        <div>
-                            <span>Installed RAM</span>
-                            <strong>@computerInformation.TotalMemoryGb GB</strong>
-                        </div>
-                    </div>
-                }
-            }
-        </article>
-
-        <article class="dashboard-card storage-card">
-            <div class="card-heading">
-                <span class="tool-mark red-mark">DS</span>
-                <div>
-                    <h2>Disk Storage</h2>
-                    <p>Review available capacity before scanning folder usage.</p>
-                </div>
-            </div>
-
-            <button class="btn secondary-action"
-                    @onclick="LoadDiskStorage">
-                Refresh storage
-            </button>
-
-            @if (drives is not null)
-            {
-                <div class="drive-list">
-                    @foreach (var drive in drives)
+                    <button class="btn secondary-action" disabled="@(folderCancellation is not null)" @onclick="ScanFolders">@(folderCancellation is null ? "Scan folder usage" : "Scanning folders…")</button>
+                    @if (folderCancellation is not null) { <button class="btn danger-action" @onclick="CancelFolderScan">Cancel scan</button> }
+                    <p class="scan-note">Read-only scan. Links are skipped. Limited to 15 seconds and 100,000 entries.</p>
+                    @if (folderMessage is not null) { <p role="status">@folderMessage</p> }
+                    @if (folderResult is not null)
                     {
-                        <div class="drive-item">
-                            <div class="drive-heading">
-                                <div>
-                                    <strong>@drive.DriveName</strong>
-                                    <span>@drive.Format drive</span>
-                                </div>
-                                <strong>@drive.UsedPercentage% used</strong>
+                        @if (folderResult.Error is not null) { <p role="alert" class="error-message">@folderResult.Error</p> }
+                        else
+                        {
+                            <p>@Size(folderResult.Bytes) in @folderResult.Files files. @folderResult.Skipped entries skipped.</p>
+                            @if (folderResult.IsPartial) { <p role="status">Scan limit reached. Totals are partial; configure a smaller root for a complete result.</p> }
+                            <div class="scan-result-list">
+                                @foreach (var folder in folderResult.Folders)
+                                {
+                                    <div class="scan-result"><div><strong>@folder.Name</strong><span>@folder.Files files</span></div><strong>@Size(folder.Bytes)</strong></div>
+                                }
                             </div>
-
-                            <div class="drive-progress">
-                                <div style="@($"width: {drive.UsedPercentage:F1}%")"></div>
-                            </div>
-
-                            <div class="drive-footer">
-                                <span>@drive.UsedGb GB used</span>
-                                <span>@drive.FreeGb GB free of @drive.TotalGb GB</span>
-                            </div>
-                        </div>
+                            <p class="scan-note">Showing up to 20 largest groups. Totals include all scanned files.</p>
+                        }
                     }
-                </div>
-            }
-        </article>
-    </section>
+                }
+            </article>
+        </section>
+    }
 </div>
-<article class="dashboard-card scanner-card">
-    <div class="card-heading">
-        <span class="tool-mark blue-mark">TCP</span>
-        <div>
-            <h2>Local Port Scanner</h2>
-            <p>Check common web and development ports on this computer.</p>
-        </div>
-    </div>
-
-    <button class="btn secondary-action"
-            @onclick="ScanLocalPorts"
-            disabled="@isScanningPorts">
-        @(isScanningPorts ? "Scanning localhost..." : "Scan localhost")
-    </button>
-
-    @if (portScanResults is not null)
-    {
-        <div class="scan-result-list">
-            @foreach (var result in portScanResults)
-            {
-                <div class="scan-result">
-                    <div>
-                        <strong>Port @result.Port</strong>
-                        <span>@result.Service</span>
-                    </div>
-
-                    <span class="port-status @(result.IsOpen ? "port-open" : "port-closed")">
-                        @(result.IsOpen ? "Open" : "Closed")
-                    </span>
-                </div>
-            }
-        </div>
-    }
-</article>
-
 @code {
-    private bool isChecking;
+    private readonly CancellationTokenSource lifetime = new();
+    private bool busy;
+    private string? operation, error, folderMessage;
     private ApiHealthResult? healthResult;
-
-    private async Task RunHealthCheck()
-    {
-        isChecking = true;
-        healthResult = null;
-        healthResult = await HealthChecker.CheckAsync();
-        isChecking = false;
-    }
-
-    private bool isLoadingMetrics;
     private SystemMetricsResult? systemMetrics;
-
-    private Task LoadSystemMetrics()
-    {
-        isLoadingMetrics = true;
-        systemMetrics = MetricsService.GetCurrentProcessMetrics();
-        isLoadingMetrics = false;
-
-        return Task.CompletedTask;
-    }
-
-    private bool isMonitoring;
     private LiveSystemMetricsResult? liveMetrics;
-    private CancellationTokenSource? monitorCancellation;
-
-    private Task StartLiveMonitor()
+    private ComputerInformationResult? computerInformation;
+    private IReadOnlyList<DriveStorageResult>? drives;
+    private IReadOnlyList<TcpPortResult>? ports;
+    private FolderScanResult? folderResult;
+    private CancellationTokenSource? monitorCancellation, folderCancellation;
+    private Task? monitorTask, folderTask;
+    private static string Size(long bytes) => bytes >= 1073741824 ? $"{bytes / 1073741824.0:F2} GB" : $"{bytes / 1048576.0:F2} MB";
+    private async Task Run(string name, Func<Task> action)
     {
-        if (isMonitoring)
-        {
-            return Task.CompletedTask;
-        }
-
-        isMonitoring = true;
-        monitorCancellation = new CancellationTokenSource();
-        _ = MonitorSystemAsync(monitorCancellation.Token);
-
-        return Task.CompletedTask;
+        if (!Settings.Enabled || busy || lifetime.IsCancellationRequested) return;
+        busy = true; operation = name; error = null;
+        try { await action(); }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
+        catch (Exception ex) { Logger.LogWarning(ex, "Diagnostic operation {Operation} failed", name); error = "The operation could not finish. Try again or check the server logs."; }
+        finally { busy = false; operation = null; }
     }
-
-    private Task StopLiveMonitor()
+    private Task RunHealthCheck() => Run("health", async () => healthResult = await HealthChecker.CheckAsync(lifetime.Token));
+    private Task LoadSystemMetrics() => Run("metrics", () => { systemMetrics = MetricsService.GetCurrentProcessMetrics(); return Task.CompletedTask; });
+    private Task LoadComputerInformation() => Run("computer", async () => computerInformation = await Task.Run(ComputerService.GetComputerInformation, lifetime.Token));
+    private Task LoadDiskStorage() => Run("storage", async () => drives = await Task.Run(DiskService.GetReadyDrives, lifetime.Token));
+    private Task ScanLocalPorts() => Run("ports", async () => ports = await PortScanner.ScanLocalhostAsync(lifetime.Token));
+    private void StartLiveMonitor()
     {
-        monitorCancellation?.Cancel();
-        isMonitoring = false;
-
-        return Task.CompletedTask;
+        if (!Settings.Enabled || monitorTask is not null) return;
+        monitorCancellation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        monitorTask = MonitorAsync(monitorCancellation.Token);
     }
-
-    private async Task MonitorSystemAsync(CancellationToken cancellationToken)
+    private async Task MonitorAsync(CancellationToken ct)
     {
         try
         {
             using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
-
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                liveMetrics = MetricsService.GetLiveMetrics();
-                await InvokeAsync(StateHasChanged);
-                await timer.WaitForNextTickAsync(cancellationToken);
-            }
+            do { liveMetrics = MetricsService.GetLiveMetrics(); await InvokeAsync(StateHasChanged); }
+            while (await timer.WaitForNextTickAsync(ct));
         }
-        catch (OperationCanceledException)
-        {
-            // Expected when the user stops monitoring.
-        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+        catch (Exception ex) { Logger.LogWarning(ex, "Live monitor stopped"); error = "Live monitoring stopped. Stop and restart the monitor to retry."; await InvokeAsync(StateHasChanged); }
     }
-
-    private ComputerInformationResult? computerInformation;
-
-    private Task LoadComputerInformation()
+    private async Task StopLiveMonitor()
     {
-        computerInformation =
-            ComputerInformationService.GetComputerInformation();
-
-        return Task.CompletedTask;
+        if (monitorCancellation is null) return;
+        await monitorCancellation.CancelAsync();
+        if (monitorTask is not null) await monitorTask;
+        monitorCancellation.Dispose(); monitorCancellation = null; monitorTask = null;
     }
-
-    private IReadOnlyList<DriveStorageResult>? drives;
-
-    private Task LoadDiskStorage()
+    private Task ScanFolders()
     {
-        drives = DiskStorageService.GetReadyDrives();
-
-        return Task.CompletedTask;
+        if (!Settings.Enabled || folderCancellation is not null) return Task.CompletedTask;
+        folderCancellation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        folderTask = ScanFoldersCore(folderCancellation);
+        return folderTask;
     }
-
-    public void Dispose()
+    private async Task ScanFoldersCore(CancellationTokenSource cancellation)
     {
-        monitorCancellation?.Cancel();
+        folderResult = null; folderMessage = null;
+        try { folderResult = await FolderScanner.ScanAsync(cancellation.Token); }
+        catch (OperationCanceledException) { folderMessage = "Scan cancelled."; }
+        catch (Exception ex) { Logger.LogWarning(ex, "Folder scan failed"); folderMessage = "The scan could not finish. Check the server logs."; }
+        finally { cancellation.Dispose(); folderCancellation = null; }
     }
-    private bool isScanningPorts;
-    private IReadOnlyList<TcpPortResult>? portScanResults;
-
-    private async Task ScanLocalPorts()
+    private void CancelFolderScan() => folderCancellation?.Cancel();
+    public async ValueTask DisposeAsync()
     {
-        isScanningPorts = true;
-        portScanResults = null;
-
-        try
-        {
-            portScanResults = await PortScanner.ScanLocalhostAsync();
-        }
-        finally
-        {
-            isScanningPorts = false;
-        }
+        await lifetime.CancelAsync();
+        await StopLiveMonitor();
+        if (folderTask is not null) await folderTask;
+        lifetime.Dispose();
     }
 }

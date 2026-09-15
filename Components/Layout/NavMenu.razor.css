@@ -154,29 +154,24 @@
         cursor: pointer;
     }
 
-        .navbar-toggler span,
-        .navbar-toggler::before,
-        .navbar-toggler::after {
-            width: 18px;
-            height: 2px;
-            display: block;
-            border-radius: 2px;
-            background: #ffffff;
-            content: "";
-        }
-
-        .navbar-toggler::before {
-            transform: translateY(-6px);
-        }
-
-        .navbar-toggler::after {
-            transform: translateY(4px);
-        }
-
     .nav-scrollable {
         display: none;
         min-height: auto;
         padding-top: 16px;
+    }
+
+    .nav-toggle {
+        display: block;
+        position: absolute;
+        right: 24px;
+        top: 22px;
+        width: 18px;
+        height: 18px;
+        opacity: 0;
+    }
+
+    .brand-row:has(+ .nav-toggle:focus-visible) .navbar-toggler {
+        outline: 2px solid #ffffff;
     }
 
     .nav-toggle:checked ~ .nav-scrollable {

@@ -338,10 +338,73 @@
         background: linear-gradient(90deg, #ed6a5e, #ee9b57);
     }
 
+.scanner-card,
+.folder-card {
+    grid-column: span 6;
+}
+
+.scan-result-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 20px;
+}
+
+.scan-result {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    overflow-wrap: anywhere;
+    border-radius: 9px;
+    background: #f7f9fc;
+}
+
+.scan-result div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.scan-result strong {
+    color: #26344d;
+    font-size: 0.84rem;
+}
+
+.scan-result span {
+    color: #74829a;
+    font-size: 0.76rem;
+}
+
+.port-status {
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-weight: 700;
+}
+
+.scan-result .port-open {
+    background: #dcfce7;
+    color: #167343;
+}
+
+.scan-result .port-closed {
+    background: #edf1f6;
+    color: #66758e;
+}
+
+.scan-note {
+    margin-top: 16px;
+    color: #62718a;
+    font-size: 0.8rem;
+}
+
 @media (max-width: 1050px) {
     .dashboard-card,
     .computer-card,
-    .storage-card {
+    .storage-card,
+    .scanner-card,
+    .folder-card {
         grid-column: span 6;
     }
 }
@@ -363,7 +426,9 @@
 
     .dashboard-card,
     .computer-card,
-    .storage-card {
+    .storage-card,
+    .scanner-card,
+    .folder-card {
         grid-column: auto;
     }
 }
@@ -378,78 +443,14 @@
         grid-template-columns: 1fr;
     }
 
-        .computer-details div:nth-child(3) {
-            grid-column: auto;
-        }
+    .computer-details div:nth-child(3) {
+        grid-column: auto;
+    }
 
     .drive-heading,
     .drive-footer {
         align-items: flex-start;
         flex-direction: column;
         gap: 4px;
-    }
-    .scanner-card {
-        grid-column: span 5;
-    }
-
-    .scan-result-list {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        margin-top: 20px;
-    }
-
-    .scan-result {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        padding: 10px 12px;
-        border-radius: 9px;
-        background: #f7f9fc;
-    }
-
-        .scan-result div {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .scan-result strong {
-            color: #26344d;
-            font-size: 0.84rem;
-        }
-
-        .scan-result span {
-            color: #74829a;
-            font-size: 0.76rem;
-        }
-
-    .port-status {
-        padding: 4px 8px;
-        border-radius: 999px;
-        font-weight: 700;
-    }
-
-    .scan-result .port-open {
-        background: #dcfce7;
-        color: #167343;
-    }
-
-    .scan-result .port-closed {
-        background: #edf1f6;
-        color: #66758e;
-    }
-
-    @media (max-width: 1050px) {
-        .scanner-card {
-            grid-column: span 6;
-        }
-    }
-
-    @media (max-width: 700px) {
-        .scanner-card {
-            grid-column: auto;
-        }
     }
 }

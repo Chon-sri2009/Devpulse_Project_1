@@ -1,5 +1,11 @@
-﻿bin/
+bin/
 obj/
 .vs/
 .git/
 appsettings.Production.json
+data/
+artifacts/
+tests/
+TestResults/
+*.user
+.env

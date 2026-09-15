@@ -1,69 +1,192 @@
-﻿@page "/spotify"
+@page "/spotify"
 @using Microsoft.AspNetCore.Components.Authorization
+@using MiniProject_Everything_1.Services
+@inject SpotifySettings Settings
+@inject SpotifyPlayerService Player
+@inject AuthenticationStateProvider Authentication
+@inject ILogger<Spotify> Logger
 @rendermode InteractiveServer
+@implements IAsyncDisposable
 
 <PageTitle>Spotify Player | DevPulse</PageTitle>
-
 <div class="spotify-page">
     <section class="spotify-hero">
         <p class="eyebrow">Spotify integration</p>
         <h1>Your music, connected.</h1>
-        <p>
-            Connect Spotify to view and control playback on your active device.
-        </p>
+        <p>Control playback on your Spotify devices. Open Spotify and start a track to get connected.</p>
     </section>
-
-    <AuthorizeView>
-        <Authorized Context="authState">
-            <section class="spotify-card">
-                <span class="spotify-mark">♫</span>
-
-                <div>
-                    <p class="connection-label">Spotify connected</p>
-                    <h2>Welcome, @authState.User.Identity?.Name</h2>
-                    <p>
-                        Your player controls will appear here in the next step.
-                    </p>
-                </div>
-
-                <div class="spotify-actions">
-                    <a class="spotify-button secondary-button"
-                       href="https://open.spotify.com/"
-                       target="_blank"
-                       rel="noopener">
-                        Open Spotify
-                    </a>
-
-                    <a class="spotify-button disconnect-button"
-                       href="spotify/logout">
-                        Disconnect
-                    </a>
-                </div>
-            </section>
-        </Authorized>
-
-        <NotAuthorized>
-            <section class="spotify-card">
-                <span class="spotify-mark">♫</span>
-
-                <div>
-                    <p class="connection-label">Connect your account</p>
-                    <h2>Spotify Player</h2>
-                    <p>
-                        Sign in with Spotify to control your own active
-                        Spotify device from DevPulse.
-                    </p>
-                </div>
-
-                <a class="spotify-button connect-button"
-                   href="spotify/login">
-                    Connect Spotify
-                </a>
-            </section>
-        </NotAuthorized>
-
-        <Authorizing>
-            <p class="loading-message">Checking Spotify connection...</p>
-        </Authorizing>
-    </AuthorizeView>
+    @if (!Settings.IsConfigured)
+    {
+        <section class="spotify-card"><span class="spotify-mark" aria-hidden="true">♫</span>
+            <div><h2>Spotify is not configured yet</h2><p>The app owner needs to connect a Spotify developer application. Your diagnostics dashboard remains available.</p></div>
+        </section>
+    }
+    else
+    {
+        @if (LoginError == "login")
+        {
+            <p role="alert" class="error-message">Spotify sign-in was cancelled or could not finish. Try connecting again.</p>
+        }
+        <AuthorizeView>
+            <Authorized Context="auth">
+                <section class="spotify-card">
+                    <span class="spotify-mark" aria-hidden="true">♫</span>
+                    <div><p class="connection-label">Spotify connected</p><h2>Welcome, @auth.User.Identity?.Name</h2>
+                        <p>Playback controls require Spotify Premium and a compatible device.</p></div>
+                    <form method="post" action="/spotify/logout" data-enhance="false">
+                        <AntiforgeryToken />
+                        <button class="spotify-button disconnect-button" type="submit">Disconnect</button>
+                    </form>
+                </section>
+                <section class="player-panel" aria-busy="@busy">
+                    @if (error is not null) { <p role="alert" class="error-message">@error</p> }
+                    @if (needsLogin)
+                    {
+                        <a href="/spotify/login" data-enhance-nav="false" class="spotify-button connect-button">Reconnect Spotify</a>
+                    }
+                    @if (!loaded) { <p role="status">Loading playback…</p> }
+                    else if (playback is null) { <h2>Nothing playing yet</h2><p>Open Spotify and play something, then refresh.</p> }
+                    else
+                    {
+                        <div class="now-playing">
+                            @if (playback.Image is not null) { <img src="@playback.Image" alt="Album or episode artwork" width="144" height="144" /> }
+                            <div><p class="connection-label">@(playback.Playing ? "Now playing" : "Paused")</p>
+                                <h2>@playback.Title</h2><p>@playback.Creator</p>
+                                @if (playback.Link is not null) { <a href="@playback.Link" target="_blank" rel="noopener">Listen on Spotify</a> }
+                            </div>
+                        </div>
+                        @if (playback.DurationMs > 0)
+                        {
+                            <progress max="@playback.DurationMs" value="@Math.Clamp(playback.ProgressMs, 0, playback.DurationMs)" aria-label="Track progress"></progress>
+                            <p class="progress-label">@Duration(playback.ProgressMs) / @Duration(playback.DurationMs)</p>
+                        }
+                    }
+                    <div class="spotify-actions">
+                        <button class="spotify-button secondary-button" disabled="@(busy || !CanControl || Blocked("skipping_prev"))" @onclick='() => Command("previous")'>Previous</button>
+                        <button class="spotify-button connect-button" disabled="@(busy || !CanControl || Blocked(playback?.Playing == true ? "pausing" : "resuming"))"
+                            @onclick='() => Command(playback?.Playing == true ? "pause" : "play")'>@(playback?.Playing == true ? "Pause" : "Play")</button>
+                        <button class="spotify-button secondary-button" disabled="@(busy || !CanControl || Blocked("skipping_next"))" @onclick='() => Command("next")'>Next</button>
+                        <button class="spotify-button secondary-button" disabled="@busy" @onclick="Refresh">Refresh playback</button>
+                        <a href="https://open.spotify.com/" target="_blank" rel="noopener" class="spotify-button secondary-button">Open Spotify</a>
+                    </div>
+                    <div class="device-controls">
+                        <label for="spotify-device">Playback device</label>
+                        <select id="spotify-device" class="form-select" @bind="selectedDevice" disabled="@(busy || needsLogin)">
+                            <option value="">Select a device</option>
+                            @foreach (var device in devices)
+                            {
+                                <option value="@device.Id" disabled="@(device.Restricted || string.IsNullOrEmpty(device.Id))">@device.Name @(device.Active ? "(active)" : "") @(device.Restricted ? "(restricted)" : "")</option>
+                            }
+                        </select>
+                        <button class="spotify-button secondary-button" disabled="@(busy || needsLogin || string.IsNullOrEmpty(selectedDevice) || Blocked("transferring_playback"))"
+                            @onclick='() => Command("transfer")'>Use this device</button>
+                        @if (devices.Count == 0 && loaded) { <p>No devices found. Open a Spotify app on your phone or computer.</p> }
+                        <label for="spotify-volume">Volume: @(volumeEdit ?? playback?.Device?.Volume ?? 0)%</label>
+                        <input id="spotify-volume" type="range" min="0" max="100" value="@(volumeEdit ?? playback?.Device?.Volume ?? 0)"
+                            @onchange="EditVolume" disabled="@(busy || !CanControl || playback?.Device?.SupportsVolume != true)" />
+                        <button class="spotify-button secondary-button" disabled="@(busy || !CanControl || playback?.Device?.SupportsVolume != true)"
+                            @onclick='() => Command("volume")'>Set volume</button>
+                        @if (playback?.Device?.SupportsVolume == false) { <p>This device does not support remote volume changes.</p> }
+                    </div>
+                    <p class="refresh-note">Playback refreshes every 10 seconds while this page is open. Commands may take a moment to appear.</p>
+                    @if (updated is not null) { <p class="refresh-note">Last refreshed @updated.Value.ToLocalTime().ToString("HH:mm:ss")</p> }
+                </section>
+            </Authorized>
+            <NotAuthorized>
+                <section class="spotify-card"><span class="spotify-mark" aria-hidden="true">♫</span>
+                    <div><h2>Connect your account</h2><p>Sign in to view your music and control your own Spotify devices.</p></div>
+                    <a class="spotify-button connect-button" href="/spotify/login" data-enhance-nav="false">Connect Spotify</a>
+                </section>
+            </NotAuthorized>
+        </AuthorizeView>
+    }
 </div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "error")] public string? LoginError { get; set; }
+    private readonly CancellationTokenSource lifetime = new();
+    private Task? poll;
+    private System.Security.Claims.ClaimsPrincipal? user;
+    private SpotifyPlayback? playback;
+    private IReadOnlyList<SpotifyDevice> devices = [];
+    private string? error;
+    private string selectedDevice = "";
+    private bool busy, loaded, needsLogin;
+    private int? volumeEdit;
+    private DateTimeOffset? updated;
+    private bool CanControl => !needsLogin && playback?.Device is { Restricted: false, Id.Length: > 0 };
+    private bool Blocked(string action) => playback?.Disallowed.Contains(action) == true;
+    private static string Duration(int ms) => TimeSpan.FromMilliseconds(Math.Max(0, ms)).ToString(@"m\:ss");
+    private void EditVolume(ChangeEventArgs e) { if (int.TryParse(e.Value?.ToString(), out var n)) volumeEdit = Math.Clamp(n, 0, 100); }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || !Settings.IsConfigured) return;
+        user = (await Authentication.GetAuthenticationStateAsync()).User;
+        if (user.Identity?.IsAuthenticated != true) return;
+        await Refresh();
+        poll = PollAsync();
+    }
+    private async Task PollAsync()
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(10));
+            while (await timer.WaitForNextTickAsync(lifetime.Token))
+            {
+                if (!needsLogin) await InvokeAsync(Refresh);
+            }
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
+    }
+    private Task Refresh() => Run(async () =>
+    {
+        var current = await Player.GetPlaybackAsync(user!, lifetime.Token);
+        if (!Accept(current)) return;
+        playback = current.Data is { } data ? SpotifyPlayback.Parse(data) : null;
+        var available = await Player.GetDevicesAsync(user!, lifetime.Token);
+        if (!Accept(available)) return;
+        devices = available.Data is { } list ? SpotifyPlayback.ParseDevices(list) : [];
+        if (!devices.Any(d => d.Id == selectedDevice))
+            selectedDevice = playback?.Device?.Id ?? devices.FirstOrDefault(d => !d.Restricted)?.Id ?? "";
+        updated = DateTimeOffset.UtcNow;
+    });
+    private Task Command(string command) => Run(async () =>
+    {
+        var result = await Player.CommandAsync(user!, command,
+            command == "transfer" ? selectedDevice : playback?.Device?.Id,
+            command == "volume" ? volumeEdit ?? playback?.Device?.Volume ?? 0 : null, lifetime.Token);
+        if (!Accept(result)) return;
+        volumeEdit = null;
+        // Spotify applies player actions asynchronously; the regular refresh reconciles the result.
+        updated = null;
+    });
+    private bool Accept(SpotifyReply result)
+    {
+        if (result.Success) return true;
+        error = result.Error;
+        needsLogin = result.NeedsLogin;
+        return false;
+    }
+    private async Task Run(Func<Task> action)
+    {
+        if (busy || user is null || lifetime.IsCancellationRequested) return;
+        busy = true;
+        error = null;
+        StateHasChanged();
+        try { await action(); }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
+        catch (Exception ex)
+        {
+            Logger.LogWarning("Spotify UI operation failed: {ExceptionType}", ex.GetType().Name);
+            error = "Could not complete the request. Please try again.";
+        }
+        finally { loaded = true; busy = false; if (!lifetime.IsCancellationRequested) StateHasChanged(); }
+    }
+    public async ValueTask DisposeAsync()
+    {
+        await lifetime.CancelAsync();
+        if (poll is not null) await poll;
+        lifetime.Dispose();
+    }
+}

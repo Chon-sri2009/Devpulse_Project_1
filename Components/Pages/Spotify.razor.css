@@ -1,128 +1,25 @@
-﻿.spotify-page {
-    display: flex;
-    flex-direction: column;
-    gap: 32px;
-}
-
-.spotify-hero {
-    max-width: 680px;
-}
-
-.eyebrow {
-    margin: 0 0 8px;
-    color: #1d9a59;
-    font-size: 0.75rem;
-    font-weight: 800;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-}
-
-.spotify-hero h1 {
-    margin: 0;
-    color: #172033;
-    font-size: clamp(2rem, 4vw, 2.8rem);
-    letter-spacing: -0.045em;
-}
-
-.spotify-hero p:last-child {
-    margin: 12px 0 0;
-    color: #62718a;
-    font-size: 1rem;
-    line-height: 1.6;
-}
-
-.spotify-card {
-    max-width: 780px;
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-    gap: 20px;
-    padding: 28px;
-    border: 1px solid #d9eee1;
-    border-radius: 18px;
-    background: #ffffff;
-    box-shadow: 0 10px 28px rgba(27, 39, 70, 0.05);
-}
-
-.spotify-mark {
-    width: 56px;
-    height: 56px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 16px;
-    background: #1db954;
-    color: #ffffff;
-    font-size: 2rem;
-    font-weight: 700;
-}
-
-.connection-label {
-    margin: 0 0 5px;
-    color: #1d9a59;
-    font-size: 0.75rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
-.spotify-card h2 {
-    margin: 0;
-    color: #172033;
-    font-size: 1.25rem;
-}
-
-.spotify-card p:last-child {
-    margin: 7px 0 0;
-    color: #66758e;
-    font-size: 0.9rem;
-    line-height: 1.5;
-}
-
-.spotify-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.spotify-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 40px;
-    padding: 0 14px;
-    border-radius: 9px;
-    font-size: 0.85rem;
-    font-weight: 700;
-    text-decoration: none;
-}
-
-.connect-button {
-    background: #1db954;
-    color: #ffffff;
-}
-
-.secondary-button {
-    background: #edf2f9;
-    color: #34435e;
-}
-
-.disconnect-button {
-    background: #fff0f0;
-    color: #b92f2f;
-}
-
-.loading-message {
-    color: #66758e;
-}
-
-@media (max-width: 700px) {
-    .spotify-card {
-        grid-template-columns: auto 1fr;
-    }
-
-    .spotify-actions,
-    .connect-button {
-        grid-column: span 2;
-    }
-}
+.spotify-page { display:flex; flex-direction:column; gap:24px; }
+.spotify-hero { max-width:760px; }
+.eyebrow,.connection-label { color:#167343; font-size:.75rem; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
+.spotify-hero h1 { font-size:clamp(2rem,4vw,2.8rem); letter-spacing:-.045em; }
+.spotify-hero p,.spotify-card p,.refresh-note { color:#62718a; line-height:1.6; }
+.spotify-card { display:flex; flex-wrap:wrap; align-items:center; gap:20px; padding:26px; background:white; border:1px solid #d9eee1; border-radius:18px; }
+.spotify-card > div { flex:1; min-width:180px; }
+.spotify-card h2 { font-size:1.25rem; }
+.spotify-mark { width:56px; height:56px; display:grid; place-items:center; border-radius:16px; background:#16883e; color:white; font-size:2rem; }
+.spotify-actions { display:flex; flex-wrap:wrap; gap:10px; margin:20px 0; }
+.spotify-button { display:inline-flex; align-items:center; justify-content:center; min-height:42px; border:0; padding:8px 16px; border-radius:9px; font-size:.9rem; font-weight:700; text-decoration:none; }
+.connect-button { background:#167343; color:#fff; }
+.secondary-button { background:#edf2f9; color:#34435e; }
+.disconnect-button { background:#fff0f0; color:#b92f2f; }
+button:disabled { opacity:.5; cursor:not-allowed; }
+.player-panel { padding:28px; background:white; border:1px solid #e1e7f0; border-radius:18px; }
+.now-playing { display:flex; align-items:center; gap:24px; }
+.now-playing img { object-fit:contain; flex-shrink:0; }
+.now-playing h2 { font-size:1.6rem; overflow-wrap:anywhere; }
+.device-controls { display:grid; grid-template-columns:minmax(140px,1fr) minmax(120px,2fr) auto; align-items:center; gap:16px; border-top:1px solid #e1e7f0; padding-top:24px; }
+.device-controls p { grid-column:1/-1; color:#62718a; }
+progress { width:100%; height:8px; margin-top:20px; accent-color:#16883e; }
+.progress-label,.refresh-note { font-size:.8rem; margin:12px 0 0; }
+.error-message { color:#a92323; padding:14px; background:#fff0f0; border-radius:8px; }
+@media(max-width:800px) { .device-controls { grid-template-columns:1fr; } .now-playing { align-items:flex-start; flex-direction:column; } .player-panel { padding:20px; } }
