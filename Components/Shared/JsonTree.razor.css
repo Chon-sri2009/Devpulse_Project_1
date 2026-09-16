@@ -1,0 +1,1 @@
+details{margin:5px 0}summary{cursor:pointer;color:#43516a}.children{padding-left:18px;border-left:1px solid #dce4ef}.node{display:grid;grid-template-columns:minmax(80px,auto) 1fr;gap:10px;padding:3px}.node>strong{color:#2f64c8;overflow-wrap:anywhere}.value{white-space:pre-wrap;overflow-wrap:anywhere}.string{color:#147d4d}.number{color:#7b3fc6}.true,.false{color:#b54708}

@@ -28,6 +28,8 @@ $start.EnvironmentVariables['Spotify__ClientSecret'] = 'smoke-test-secret'
 $start.EnvironmentVariables['Storage__DataPath'] = $testData
 $start.EnvironmentVariables['Diagnostics__Enabled'] = 'false'
 $start.EnvironmentVariables['Hosting__RedirectToHttps'] = 'false'
+$start.EnvironmentVariables['Admin__Username'] = 'smoke-admin'
+$start.EnvironmentVariables['Admin__Password'] = 'smoke-test-password-123'
 $process = [System.Diagnostics.Process]::Start($start)
 $stdout = $process.StandardOutput.ReadToEndAsync()
 $stderr = $process.StandardError.ReadToEndAsync()
@@ -49,13 +51,14 @@ try {
         Start-Sleep -Milliseconds 250
     }
     if (!$ready) { throw 'Server did not become ready.' }
-    foreach ($path in @('/', '/dashboard', '/spotify', '/healthz')) {
+    foreach ($path in @('/', '/dashboard', '/spotify', '/healthz', '/admin')) {
         $r = $client.GetAsync($path).GetAwaiter().GetResult()
         if ([int]$r.StatusCode -ne 200) { throw "$path returned $($r.StatusCode)" }
         if ($path -eq '/') {
             $body = $r.Content.ReadAsStringAsync().GetAwaiter().GetResult()
             if (!$body.Contains('Host diagnostics are disabled') -or $body.Contains('Run health check')) { throw 'Production diagnostics gate failed.' }
         }
+        if ($path -eq '/admin' -and !$r.Content.ReadAsStringAsync().GetAwaiter().GetResult().Contains('Administrator sign in')) { throw 'Admin sign-in page failed.' }
         $r.Dispose()
         Write-Output "PASS $path"
     }
@@ -63,6 +66,12 @@ try {
     if ([int]$r.StatusCode -ne 404 -or !$r.Content.ReadAsStringAsync().GetAwaiter().GetResult().Contains('Page not found')) { throw '404 page failed.' }
     $r.Dispose()
     Write-Output 'PASS unknown route'
+    foreach ($path in @('/operations', '/telemetry', '/tools')) {
+        $r = $client.GetAsync($path).GetAwaiter().GetResult()
+        if ([int]$r.StatusCode -ne 404) { throw "Production diagnostics exposed $path" }
+        $r.Dispose()
+    }
+    Write-Output 'PASS production operations gate'
     $homeResponse = $client.GetAsync('/').GetAwaiter().GetResult()
     $html = $homeResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult()
     $homeResponse.Dispose()
@@ -93,6 +102,49 @@ try {
     $r.Dispose()
     $content.Dispose()
     Write-Output 'PASS logout rejects forged request'
+    $r = $client.GetAsync('/admin').GetAwaiter().GetResult()
+    $adminHtml = $r.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+    $r.Dispose()
+    $anti = [regex]::Match($adminHtml, 'name="__RequestVerificationToken"[^>]*value="([^"]+)"').Groups[1].Value
+    if ([string]::IsNullOrWhiteSpace($anti)) { throw 'Admin antiforgery token missing.' }
+    $fields = New-Object 'System.Collections.Generic.Dictionary[string,string]'
+    $fields.Add('username', 'smoke-admin')
+    $fields.Add('password', 'smoke-test-password-123')
+    $fields.Add('__RequestVerificationToken', $anti)
+    $form = [System.Net.Http.FormUrlEncodedContent]::new($fields)
+    $r = $client.PostAsync('/admin/login', $form).GetAwaiter().GetResult()
+    if ([int]$r.StatusCode -ne 302) { throw 'Admin login failed.' }
+    $r.Dispose(); $form.Dispose()
+    $r = $client.GetAsync('/admin/export').GetAwaiter().GetResult()
+    $zip = $r.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult()
+    if ([int]$r.StatusCode -ne 200 -or $zip.Length -lt 100 -or $r.Content.Headers.ContentType.MediaType -ne 'application/zip') { throw 'Admin diagnostics export failed.' }
+    $r.Dispose()
+    Write-Output 'PASS administrator login and diagnostics export'
+    $r = $client.GetAsync('/admin').GetAwaiter().GetResult()
+    $adminHtml = $r.Content.ReadAsStringAsync().GetAwaiter().GetResult(); $r.Dispose()
+    $anti = [regex]::Match($adminHtml, 'name="__RequestVerificationToken"[^>]*value="([^"]+)"').Groups[1].Value
+    $fields = New-Object 'System.Collections.Generic.Dictionary[string,string]'
+    $fields.Add('enabled', 'true'); $fields.Add('message', 'Smoke maintenance'); $fields.Add('__RequestVerificationToken', $anti)
+    $form = [System.Net.Http.FormUrlEncodedContent]::new($fields)
+    $r = $client.PostAsync('/admin/maintenance', $form).GetAwaiter().GetResult()
+    if ([int]$r.StatusCode -ne 302) { throw 'Enabling maintenance failed.' }
+    $r.Dispose(); $form.Dispose()
+    $r = $client.GetAsync('/').GetAwaiter().GetResult()
+    if ([int]$r.StatusCode -ne 503 -or !$r.Content.ReadAsStringAsync().GetAwaiter().GetResult().Contains('Smoke maintenance')) { throw 'Maintenance response failed.' }
+    $r.Dispose()
+    $r = $client.GetAsync('/admin').GetAwaiter().GetResult()
+    $adminHtml = $r.Content.ReadAsStringAsync().GetAwaiter().GetResult(); $r.Dispose()
+    $anti = [regex]::Match($adminHtml, 'name="__RequestVerificationToken"[^>]*value="([^"]+)"').Groups[1].Value
+    $fields = New-Object 'System.Collections.Generic.Dictionary[string,string]'
+    $fields.Add('enabled', 'false'); $fields.Add('message', 'Smoke maintenance'); $fields.Add('__RequestVerificationToken', $anti)
+    $form = [System.Net.Http.FormUrlEncodedContent]::new($fields)
+    $r = $client.PostAsync('/admin/maintenance', $form).GetAwaiter().GetResult()
+    if ([int]$r.StatusCode -ne 302) { throw 'Disabling maintenance failed.' }
+    $r.Dispose(); $form.Dispose()
+    $r = $client.GetAsync('/').GetAwaiter().GetResult()
+    if ([int]$r.StatusCode -ne 200) { throw 'Site did not recover after maintenance.' }
+    $r.Dispose()
+    Write-Output 'PASS administrator maintenance controls'
     Write-Output 'All HTTP smoke checks passed.'
 } finally {
     $client.Dispose()

@@ -9,6 +9,7 @@
 @inject TcpPortScannerService PortScanner
 @inject FolderScanService FolderScanner
 @inject DiagnosticsSettings Settings
+@inject OperationsSettings Operations
 @inject ILogger<Dashboard> Logger
 @rendermode InteractiveServer
 @implements IAsyncDisposable
@@ -52,7 +53,8 @@
                 else { <button class="btn danger-action" @onclick="StopLiveMonitor">Stop monitoring</button> }
                 @if (liveMetrics is not null)
                 {
-                    <div class="metric-list live-metric-list"><div><span>Working memory</span><strong>@liveMetrics.WorkingMemoryMb MB</strong></div><div><span>Paged memory</span><strong>@liveMetrics.PagedMemoryMb MB</strong></div><div><span>Threads</span><strong>@liveMetrics.ActiveThreads</strong></div></div>
+                    <div class="metric-list live-metric-list"><div><span>Working memory</span><strong>@liveMetrics.WorkingMemoryMb MB</strong></div><div><span>CPU</span><strong>@liveMetrics.CpuPercent%</strong></div><div><span>Threads</span><strong>@liveMetrics.ActiveThreads</strong></div></div>
+                    <div class="live-charts"><div><span>Memory history</span><svg viewBox="0 0 100 28" preserveAspectRatio="none"><polyline points="@Chart(liveHistory.Select(x => x.WorkingMemoryMb))" /></svg></div><div><span>Thread history</span><svg viewBox="0 0 100 28" preserveAspectRatio="none"><polyline points="@Chart(liveHistory.Select(x => (double)x.ActiveThreads))" /></svg></div></div>
                     <small class="updated-time">Updated @liveMetrics.CheckedAt.ToString("HH:mm:ss") (server time)</small>
                 }
             </article>
@@ -91,8 +93,10 @@
                 }
             </article>
             <article class="dashboard-card scanner-card">
-                <div class="card-heading"><span class="tool-mark blue-mark">TCP</span><div><h2>Local Port Scanner</h2><p>Common development ports on the server's IPv4 loopback interface.</p></div></div>
-                <button class="btn secondary-action" disabled="@busy" @onclick="ScanLocalPorts">@(operation == "ports" ? "Scanning localhost…" : "Scan localhost")</button>
+                <div class="card-heading"><span class="tool-mark blue-mark">TCP</span><div><h2>Approved Port Scanner</h2><p>Configured ports on an owner-approved host.</p></div></div>
+                @if (Operations.ApprovedHosts.Length == 0) { <p>No scan hosts configured.</p> }
+                else { <select class="form-select scanner-host" @bind="selectedPortHost">@foreach(var host in Operations.ApprovedHosts.Distinct(StringComparer.OrdinalIgnoreCase)){<option value="@host">@host</option>}</select>
+                    <button class="btn secondary-action" disabled="@busy" @onclick="ScanLocalPorts">@(operation == "ports" ? "Scanning…" : "Scan approved ports")</button> }
                 @if (ports is not null)
                 {
                     <div class="scan-result-list">
@@ -137,6 +141,7 @@
     private readonly CancellationTokenSource lifetime = new();
     private bool busy;
     private string? operation, error, folderMessage;
+    private string selectedPortHost = "";
     private ApiHealthResult? healthResult;
     private SystemMetricsResult? systemMetrics;
     private LiveSystemMetricsResult? liveMetrics;
@@ -146,6 +151,7 @@
     private FolderScanResult? folderResult;
     private CancellationTokenSource? monitorCancellation, folderCancellation;
     private Task? monitorTask, folderTask;
+    private readonly List<LiveSystemMetricsResult> liveHistory = [];
     private static string Size(long bytes) => bytes >= 1073741824 ? $"{bytes / 1073741824.0:F2} GB" : $"{bytes / 1048576.0:F2} MB";
     private async Task Run(string name, Func<Task> action)
     {
@@ -160,7 +166,8 @@
     private Task LoadSystemMetrics() => Run("metrics", () => { systemMetrics = MetricsService.GetCurrentProcessMetrics(); return Task.CompletedTask; });
     private Task LoadComputerInformation() => Run("computer", async () => computerInformation = await Task.Run(ComputerService.GetComputerInformation, lifetime.Token));
     private Task LoadDiskStorage() => Run("storage", async () => drives = await Task.Run(DiskService.GetReadyDrives, lifetime.Token));
-    private Task ScanLocalPorts() => Run("ports", async () => ports = await PortScanner.ScanLocalhostAsync(lifetime.Token));
+    protected override void OnInitialized() => selectedPortHost = Operations.ApprovedHosts.FirstOrDefault() ?? "";
+    private Task ScanLocalPorts() => Run("ports", async () => ports = await PortScanner.ScanAsync(selectedPortHost, lifetime.Token));
     private void StartLiveMonitor()
     {
         if (!Settings.Enabled || monitorTask is not null) return;
@@ -172,7 +179,7 @@
         try
         {
             using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
-            do { liveMetrics = MetricsService.GetLiveMetrics(); await InvokeAsync(StateHasChanged); }
+            do { liveMetrics = MetricsService.GetLiveMetrics(); liveHistory.Add(liveMetrics); if (liveHistory.Count > 60) liveHistory.RemoveAt(0); await InvokeAsync(StateHasChanged); }
             while (await timer.WaitForNextTickAsync(ct));
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
@@ -201,6 +208,7 @@
         finally { cancellation.Dispose(); folderCancellation = null; }
     }
     private void CancelFolderScan() => folderCancellation?.Cancel();
+    private static string Chart(IEnumerable<double> source) { var values = source.ToArray(); if (values.Length == 0) return ""; var min = values.Min(); var range = Math.Max(.001, values.Max() - min); return string.Join(' ', values.Select((v, i) => string.Create(CultureInfo.InvariantCulture, $"{(values.Length == 1 ? 0 : i * 100d / (values.Length - 1)):F2},{26 - (v - min) * 24 / range:F2}"))); }
     public async ValueTask DisposeAsync()
     {
         await lifetime.CancelAsync();

@@ -1,0 +1,43 @@
+@page "/telemetry"
+@using System.Globalization
+@using MiniProject_Everything_1.Services
+@inject TelemetryStore Store
+@inject DeploymentInfoService Deployment
+@inject IConfiguration Configuration
+@rendermode InteractiveServer
+@implements IAsyncDisposable
+<PageTitle>Telemetry | DevPulse</PageTitle>
+<div class="telemetry-page">
+    <header><p class="eyebrow">History and incidents</p><h1>Telemetry explorer</h1><p>Local request traces, runtime history, deployment identity, and threshold events.</p></header>
+    <section class="summary-grid">
+        <div><span>Version</span><strong>@info.Version</strong></div><div><span>Environment</span><strong>@info.Environment</strong></div>
+        <div><span>Uptime</span><strong>@Uptime(info.Uptime)</strong></div><div><span>Commit</span><strong>@info.Commit</strong></div>
+    </section>
+    <section class="summary-grid"><div><span>Requests / minute</span><strong>@Rate().ToString("F1")</strong></div><div><span>Error rate</span><strong>@ErrorRate().ToString("F1")%</strong></div><div><span>Average latency</span><strong>@AverageLatency().ToString("F1") ms</strong></div><div><span>OTLP export</span><strong>@(string.IsNullOrWhiteSpace(Configuration["Telemetry:OtlpEndpoint"])?"Local only":"Configured")</strong></div></section>
+    <section class="chart-grid">
+        <article><h2>Working memory</h2><strong>@Last(metrics.Select(x=>x.MemoryMb)) MB</strong><svg viewBox="0 0 100 34" preserveAspectRatio="none" role="img" aria-label="Memory history"><polyline points="@Points(metrics.Select(x=>x.MemoryMb))" /></svg></article>
+        <article><h2>CPU</h2><strong>@Last(metrics.Select(x=>x.CpuPercent))%</strong><svg viewBox="0 0 100 34" preserveAspectRatio="none" role="img" aria-label="CPU history"><polyline points="@Points(metrics.Select(x=>x.CpuPercent))" /></svg></article>
+        <article><h2>Threads</h2><strong>@Last(metrics.Select(x=>(double)x.Threads))</strong><svg viewBox="0 0 100 34" preserveAspectRatio="none" role="img" aria-label="Thread history"><polyline points="@Points(metrics.Select(x=>(double)x.Threads))" /></svg></article>
+    </section>
+    <section class="data-grid">
+        <article class="panel"><h2>Incident timeline</h2>@if(incidents.Count==0){<p>No threshold incidents recorded.</p>}else{<div class="timeline">@foreach(var item in incidents.Reverse()){<div><span class="severity @item.Severity.ToLowerInvariant()">@item.Severity</span><strong>@item.Source</strong><time>@item.At.LocalDateTime.ToString("g")</time><p>@item.Message</p></div>}</div>}</article>
+        <article class="panel"><h2>Recent request traces</h2><p>Query strings and authorization data are not stored.</p><div class="trace-table">@foreach(var item in traces.Reverse().Take(100)){<div><code>@item.Method</code><strong>@item.Path</strong><span class="@(item.Status<400?"ok":"failed")">@item.Status</span><span>@item.DurationMs ms</span><small title="@item.TraceId">@Short(item.TraceId)</small></div>}</div></article>
+    </section>
+    <section class="panel"><h2>Service check history</h2><div class="trace-table">@foreach(var item in serviceChecks.Reverse().Take(100)){<div><code>@item.Kind</code><strong>@item.Name</strong><span class="@(item.Healthy?"ok":"failed")">@(item.Healthy?"OK":"Fail")</span><span>@item.LatencyMs ms</span><small>@item.At.LocalDateTime.ToLongTimeString()</small></div>}</div></section>
+</div>
+@code {
+    private IReadOnlyList<MetricPoint> metrics=[]; private IReadOnlyList<RequestTrace> traces=[]; private IReadOnlyList<IncidentEvent> incidents=[]; private IReadOnlyList<ServiceCheckPoint> serviceChecks=[];
+    private DeploymentInfo info = null!; private readonly CancellationTokenSource stop=new(); private Task? refresh;
+    protected override void OnInitialized(){ Update(); refresh=Refresh(stop.Token); }
+    private void Update(){metrics=Store.Metrics;traces=Store.Traces;incidents=Store.Incidents;serviceChecks=Store.ServiceChecks;info=Deployment.Get();}
+    private async Task Refresh(CancellationToken ct){try{using var timer=new PeriodicTimer(TimeSpan.FromSeconds(2));while(await timer.WaitForNextTickAsync(ct)){Update();await InvokeAsync(StateHasChanged);}}catch(OperationCanceledException)when(ct.IsCancellationRequested){}}
+    private static string Uptime(TimeSpan value)=>$"{(int)value.TotalDays}d {value.Hours:00}h {value.Minutes:00}m";
+    private static string Last(IEnumerable<double> values)=>values.LastOrDefault().ToString("F1", CultureInfo.InvariantCulture);
+    private static string Short(string value)=>value.Length>12?value[..12]:value;
+    private IEnumerable<RequestTrace> Recent()=>traces.Where(x=>x.At>=DateTimeOffset.UtcNow.AddMinutes(-5));
+    private double Rate()=>Recent().Count()/5d;
+    private double ErrorRate(){var recent=Recent().ToArray();return recent.Length==0?0:recent.Count(x=>x.Status>=400)*100d/recent.Length;}
+    private double AverageLatency()=>Recent().Select(x=>(double)x.DurationMs).DefaultIfEmpty().Average();
+    private static string Points(IEnumerable<double> source){var values=source.TakeLast(120).ToArray();if(values.Length==0)return "";var min=values.Min();var range=Math.Max(.001,values.Max()-min);return string.Join(' ',values.Select((v,i)=>string.Create(CultureInfo.InvariantCulture,$"{(values.Length==1?0:i*100d/(values.Length-1)):F2},{32-(v-min)*30/range:F2}")));}
+    public async ValueTask DisposeAsync(){await stop.CancelAsync();if(refresh is not null)await refresh;stop.Dispose();}
+}

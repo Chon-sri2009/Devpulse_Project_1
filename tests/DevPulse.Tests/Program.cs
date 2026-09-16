@@ -217,6 +217,72 @@ var tests = new List<(string Name, Func<Task> Run)>
         var playback = SpotifyPlayback.Parse(json.RootElement);
         Check(playback.Link is null && playback.Image is null);
         return Task.CompletedTask;
+    }),
+    ("SHA-256 inspector hashes without retaining a file", async () =>
+    {
+        await using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("abc"));
+        Check(await DiagnosticToolsService.Sha256Async(stream, default) == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+    }),
+    ("JWT inspector decodes local JSON", () =>
+    {
+        var result = DiagnosticToolsService.DecodeJwt("eyJhbGciOiJub25lIn0.eyJzdWIiOiIxMjMifQ.");
+        Check(result.Error is null && result.Header.Contains("none") && result.Payload.Contains("123"));
+        return Task.CompletedTask;
+    }),
+    ("Administrator password requires a strong configured secret", () =>
+    {
+        Check(!new AdminAccessService(new() { Password = "short" }).IsConfigured);
+        var access = new AdminAccessService(new() { Username = "owner", Password = "a-long-test-password" });
+        Check(access.IsConfigured && access.Validate("owner", "a-long-test-password") && !access.Validate("owner", "wrong"));
+        return Task.CompletedTask;
+    }),
+    ("Telemetry history and audit records survive restart", () =>
+    {
+        using var temp = new Temp(); var storage = new AppStorage(temp.Path); var store = new TelemetryStore(storage);
+        store.Add(new MetricPoint(DateTimeOffset.UtcNow, 10, 5, 2, 1));
+        store.Add(new IncidentEvent(DateTimeOffset.UtcNow, "Warning", "Test", "Incident"));
+        store.Add(new AuditEvent(DateTimeOffset.UtcNow, "owner", "Test", "target", true));
+        var recreated = new TelemetryStore(storage);
+        Check(recreated.Metrics.Count == 1 && recreated.Incidents.Count == 1 && recreated.Audits.Count == 1);
+        return Task.CompletedTask;
+    }),
+    ("Maintenance mode state survives restart", () =>
+    {
+        using var temp = new Temp(); var storage = new AppStorage(temp.Path); var state = new MaintenanceState(storage);
+        state.Set(true, "Testing", DateTimeOffset.UtcNow.AddHours(1));
+        Check(new MaintenanceState(storage).Current.Enabled && new MaintenanceState(storage).Current.Message == "Testing");
+        return Task.CompletedTask;
+    }),
+    ("Log tailer rejects files outside the allowlist", () =>
+    {
+        using var temp = new Temp(); var file = System.IO.Path.Combine(temp.Path, "server.log"); File.WriteAllText(file, "line");
+        var tools = new DiagnosticToolsService(new(), new TestHttpFactory(_ => new(HttpStatusCode.OK)));
+        Check(tools.ReadLog(file).Error is not null);
+        return Task.CompletedTask;
+    }),
+    ("Network diagnostics reject unapproved hosts", async () =>
+    {
+        var network = new NetworkDiagnosticsService(new(), new TestHttpFactory(_ => new(HttpStatusCode.OK)));
+        try { await network.ResolveAsync("unapproved.example", default); }
+        catch (InvalidOperationException) { return; }
+        throw new InvalidOperationException("Expected allowlist rejection");
+    }),
+    ("Load tester enforces configured request and concurrency bounds", async () =>
+    {
+        var count = 0; var options = new OperationsSettings { ApprovedUrls = ["https://example.test/data"], LoadTestMaxRequests = 3, LoadTestMaxConcurrency = 2 };
+        var tools = new DiagnosticToolsService(options, new TestHttpFactory(_ => { Interlocked.Increment(ref count); return new(HttpStatusCode.OK); }));
+        var result = await tools.LoadTestAsync(options.ApprovedUrls[0], 100, 100, default);
+        Check(result.Requested == 3 && result.Succeeded == 3 && count == 3);
+    }),
+    ("Alert delivery posts to an owner-configured HTTPS webhook", async () =>
+    {
+        var count = 0;
+        var alerts = new AlertSettings { WebhookUrl = "https://alerts.example.test/devpulse" };
+        var delivery = new AlertDeliveryService(alerts,
+            new TestHttpFactory(request => { Check(request.RequestUri == new Uri(alerts.WebhookUrl)); Interlocked.Increment(ref count); return new(HttpStatusCode.OK); }),
+            NullLogger<AlertDeliveryService>.Instance);
+        await delivery.DeliverAsync(new(DateTimeOffset.UtcNow, "Warning", "Test", "Threshold exceeded"), default);
+        Check(count == 1);
     })
 };
 int failed = 0;
@@ -239,6 +305,10 @@ static HttpResponseMessage JsonResponse(string json) => new(HttpStatusCode.OK) {
 sealed class Stub(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> send) : HttpMessageHandler
 {
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) => send(request, ct);
+}
+sealed class TestHttpFactory(Func<HttpRequestMessage, HttpResponseMessage> send) : IHttpClientFactory
+{
+    public HttpClient CreateClient(string name) => new(new Stub((request, _) => Task.FromResult(send(request))));
 }
 sealed class Temp : IDisposable
 {

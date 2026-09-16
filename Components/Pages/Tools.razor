@@ -1,0 +1,35 @@
+@page "/tools"
+@using System.Text.Json
+@using MiniProject_Everything_1.Components.Shared
+@using MiniProject_Everything_1.Services
+@inject DiagnosticToolsService ToolsService
+@rendermode InteractiveServer
+<PageTitle>Inspectors | DevPulse</PageTitle>
+<div class="tools-page"><header><p class="eyebrow">Bounded local utilities</p><h1>Data inspectors</h1><p>Inspect JSON, files, tokens, and approved HTTP targets without sending uploaded content elsewhere.</p></header>
+    @if(error is not null){<p class="notice" role="alert">@error</p>}
+    <section class="tools-grid">
+        <article class="tool-card span-two"><h2>JSON Data Explorer</h2><p>Fetch up to 2 MB from an owner-approved public JSON API.</p>
+            @if(ToolsService.ApprovedUrls.Count==0){<p>No approved URLs configured.</p>}else{<select class="form-select" @bind="jsonUrl">@foreach(var url in ToolsService.ApprovedUrls){<option value="@url">@url</option>}</select><button class="action" disabled="@busy" @onclick="FetchJson">Fetch JSON</button>}
+            @if(json is not null){<div class="tree"><JsonTree Value="json.Value" /></div>}
+        </article>
+        <article class="tool-card"><h2>SHA-256 File Inspector</h2><p>Hash locally in this server circuit. Maximum file size: 25 MB.</p><InputFile OnChange="HashFile" />
+            @if(hash is not null){<div class="hash-result"><strong>@fileName</strong><code>@hash</code><small>@fileSize bytes</small></div>}
+        </article>
+        <article class="tool-card"><h2>JWT Inspector</h2><p>Decode header and payload locally. Signatures are not validated.</p><textarea class="form-control token-input" @bind="jwt" @bind:event="oninput" maxlength="65536" placeholder="Paste a JWT"></textarea><button class="action" @onclick="DecodeJwt">Decode token</button>
+            @if(jwtHeader is not null){<h3>Header</h3><pre>@jwtHeader</pre><h3>Payload</h3><pre>@jwtPayload</pre>}
+        </article>
+        <article class="tool-card span-two"><h2>Mini HTTP Load Tester</h2><p>GET requests are limited to approved URLs, 25 requests, five concurrent workers, and a 10-second client timeout.</p>
+            @if(ToolsService.ApprovedUrls.Count>0){<div class="load-controls"><select class="form-select" @bind="loadUrl">@foreach(var url in ToolsService.ApprovedUrls){<option value="@url">@url</option>}</select><label>Requests <input type="number" min="1" max="25" @bind="requestCount" /></label><label>Concurrency <input type="number" min="1" max="5" @bind="concurrency" /></label><button class="action" disabled="@busy" @onclick="RunLoadTest">Run bounded test</button></div>}
+            @if(load is not null){<div class="load-summary"><div><span>Succeeded</span><strong>@load.Succeeded</strong></div><div><span>Failed</span><strong>@load.Failed</strong></div><div><span>Average</span><strong>@load.AverageMs.ToString("F1") ms</strong></div><div><span>Range</span><strong>@load.MinMs–@load.MaxMs ms</strong></div><div><span>Total</span><strong>@load.DurationMs ms</strong></div></div>}
+        </article>
+    </section>
+</div>
+@code{
+    private bool busy;private string? error,jsonUrl,loadUrl,hash,fileName,jwt,jwtHeader,jwtPayload;private long fileSize;private JsonElement? json;private LoadTestResult? load;private int requestCount=10,concurrency=2;
+    protected override void OnInitialized(){jsonUrl=ToolsService.ApprovedUrls.FirstOrDefault();loadUrl=jsonUrl;}
+    private async Task Run(Func<Task> action){if(busy)return;busy=true;error=null;try{await action();}catch(Exception ex)when(ex is not OperationCanceledException){error=ex.Message;}finally{busy=false;}}
+    private Task FetchJson()=>Run(async()=>{var text=await ToolsService.FetchJsonAsync(jsonUrl!,default);using var document=JsonDocument.Parse(text);json=document.RootElement.Clone();});
+    private async Task HashFile(InputFileChangeEventArgs args){error=null;hash=null;try{var file=args.File;fileName=file.Name;fileSize=file.Size;await using var stream=file.OpenReadStream(25*1024*1024);hash=await DiagnosticToolsService.Sha256Async(stream,default);}catch(Exception ex){error=ex.Message;}}
+    private void DecodeJwt(){error=null;var result=DiagnosticToolsService.DecodeJwt(jwt??"");if(result.Error is not null){error=result.Error;jwtHeader=jwtPayload=null;}else{jwtHeader=result.Header;jwtPayload=result.Payload;}}
+    private Task RunLoadTest()=>Run(async()=>load=await ToolsService.LoadTestAsync(loadUrl!,requestCount,concurrency,default));
+}

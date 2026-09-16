@@ -1,0 +1,11 @@
+@using System.Text.Json
+@if (Value.ValueKind == JsonValueKind.Object)
+{
+    <details open="@Open"><summary>Object · @Value.EnumerateObject().Count() properties</summary><div class="children">@foreach(var property in Value.EnumerateObject()){<div class="node"><strong>@property.Name</strong><JsonTree Value="property.Value" /></div>}</div></details>
+}
+else if (Value.ValueKind == JsonValueKind.Array)
+{
+    <details open="@Open"><summary>Array · @Value.GetArrayLength() items</summary><div class="children">@{var index=0;}@foreach(var item in Value.EnumerateArray()){<div class="node"><strong>[@index]</strong><JsonTree Value="item" Open="false" /></div>index++;}</div></details>
+}
+else { <code class="value @Value.ValueKind.ToString().ToLowerInvariant()">@Value.ToString()</code> }
+@code { [Parameter, EditorRequired] public JsonElement Value {get;set;} [Parameter] public bool Open {get;set;}=true; }

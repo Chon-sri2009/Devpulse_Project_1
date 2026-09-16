@@ -343,6 +343,12 @@
     grid-column: span 6;
 }
 
+.live-charts { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+.live-charts > div { background:#f6f8fc; border-radius:8px; padding:7px; }
+.live-charts span { color:#68758a; font-size:.7rem; }
+.live-charts svg { display:block; width:100%; height:52px; }
+.live-charts polyline { fill:none; stroke:#2ca46f; stroke-width:2; vector-effect:non-scaling-stroke; }
+
 .scan-result-list {
     display: flex;
     flex-direction: column;
@@ -454,3 +460,4 @@
         gap: 4px;
     }
 }
+.scanner-host { margin-bottom: 8px; }

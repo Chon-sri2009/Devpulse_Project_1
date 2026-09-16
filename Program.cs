@@ -8,8 +8,13 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
 using MiniProject_Everything_1.Components;
 using MiniProject_Everything_1.Services;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
@@ -17,7 +22,17 @@ builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddCascadingAuthenticationState();
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options => options.AddPolicy("Admin", policy =>
+    policy.AddAuthenticationSchemes(Program.AdminScheme).RequireAuthenticatedUser()));
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddFixedWindowLimiter("admin-login", limiter =>
+    { limiter.PermitLimit = 5; limiter.Window = TimeSpan.FromMinutes(1); limiter.QueueLimit = 0; });
+    options.AddConcurrencyLimiter("admin-actions", limiter =>
+    { limiter.PermitLimit = 2; limiter.QueueLimit = 0; });
+});
 var spotify = new SpotifySettings(builder.Configuration["Spotify:ClientId"] ?? "",
     builder.Configuration["Spotify:ClientSecret"] ?? "");
 builder.Services.AddSingleton(spotify);
@@ -32,6 +47,26 @@ if (OperatingSystem.IsWindows() && builder.Configuration.GetValue("Storage:Prote
 builder.Services.AddSingleton<SpotifySessionStore>();
 builder.Services.AddHttpClient("Spotify", client => client.Timeout = TimeSpan.FromSeconds(15));
 builder.Services.AddScoped<SpotifyPlayerService>();
+var operations = builder.Configuration.GetSection("Operations").Get<OperationsSettings>() ?? new();
+var alerts = builder.Configuration.GetSection("Alerts").Get<AlertSettings>() ?? new();
+var admin = builder.Configuration.GetSection("Admin").Get<AdminSettings>() ?? new();
+builder.Services.AddSingleton(operations);
+builder.Services.AddSingleton(alerts);
+builder.Services.AddSingleton(admin);
+var otlpEndpoint = Uri.TryCreate(builder.Configuration["Telemetry:OtlpEndpoint"], UriKind.Absolute, out var endpoint)
+    && endpoint.Scheme is "http" or "https" ? endpoint : null;
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource.AddService("DevPulse"))
+    .WithMetrics(metrics =>
+    {
+        metrics.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddRuntimeInstrumentation();
+        if (otlpEndpoint is not null) metrics.AddOtlpExporter(options => options.Endpoint = otlpEndpoint);
+    })
+    .WithTracing(traces =>
+    {
+        traces.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation();
+        if (otlpEndpoint is not null) traces.AddOtlpExporter(options => options.Endpoint = otlpEndpoint);
+    });
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
@@ -61,6 +96,14 @@ var authentication = builder.Services.AddAuthentication(CookieAuthenticationDefa
             if (!await store.ExistsAsync(context.Principal!, context.HttpContext.RequestAborted))
                 context.RejectPrincipal();
         };
+    })
+    .AddCookie(Program.AdminScheme, options =>
+    {
+        options.Cookie.Name = "DevPulse.Admin";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Strict;
+        options.ExpireTimeSpan = TimeSpan.FromHours(4);
+        options.LoginPath = "/admin";
     });
 if (spotify.IsConfigured)
 {
@@ -102,11 +145,26 @@ if (spotify.IsConfigured)
     });
 }
 builder.Services.AddHttpClient<ApiHealthCheckService>(client => client.Timeout = TimeSpan.FromSeconds(10));
+builder.Services.AddHttpClient("Diagnostics", client => client.Timeout = TimeSpan.FromSeconds(10))
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+builder.Services.AddHttpClient("LoadTest", client => client.Timeout = TimeSpan.FromSeconds(10))
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+builder.Services.AddHttpClient("Alerts", client => client.Timeout = TimeSpan.FromSeconds(5));
 builder.Services.AddSingleton<SystemMetricsService>();
 builder.Services.AddSingleton<ComputerInformationService>();
 builder.Services.AddSingleton<DiskStorageService>();
 builder.Services.AddSingleton<TcpPortScannerService>();
 builder.Services.AddSingleton<FolderScanService>();
+builder.Services.AddSingleton<TelemetryStore>();
+builder.Services.AddSingleton<AlertDeliveryService>();
+builder.Services.AddSingleton<NetworkDiagnosticsService>();
+builder.Services.AddSingleton<DiagnosticToolsService>();
+builder.Services.AddSingleton<DeploymentInfoService>();
+builder.Services.AddSingleton<MaintenanceState>();
+builder.Services.AddSingleton<AdminAccessService>();
+builder.Services.AddSingleton<AdministrationService>();
+builder.Services.AddHostedService<MetricsCollector>();
+builder.Services.AddHostedService<WatchlistCollector>();
 builder.Services.AddSingleton(new DiagnosticsSettings(
     builder.Configuration.GetValue<bool?>("Diagnostics:Enabled") ?? builder.Environment.IsDevelopment(),
     builder.Configuration["Diagnostics:FolderRoot"]));
@@ -119,14 +177,24 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     app.UseHsts();
 }
+app.UseMiddleware<TelemetryMiddleware>();
+app.UseMiddleware<MaintenanceMiddleware>();
+app.UseMiddleware<DiagnosticsGuardMiddleware>();
 // TLS may terminate at the host proxy; opt in only when Kestrel has an HTTPS endpoint.
 if (builder.Configuration.GetValue<bool>("Hosting:RedirectToHttps")) app.UseHttpsRedirection();
 app.UseStatusCodePagesWithReExecute("/not-found");
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapHealthChecks("/healthz");
+app.MapGet("/healthz/details", () => Results.Ok(new
+{
+    status = "Healthy",
+    service = "DevPulse",
+    timestamp = DateTimeOffset.UtcNow
+}));
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 app.MapGet("/spotify/login", () => spotify.IsConfigured
     ? Results.Challenge(new AuthenticationProperties { RedirectUri = "/spotify" }, ["Spotify"])
@@ -139,5 +207,68 @@ app.MapPost("/spotify/logout", async (HttpContext context, IAntiforgery antiforg
     await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
     return Results.LocalRedirect("/spotify");
 });
+app.MapPost("/admin/login", async (HttpContext context, IAntiforgery antiforgery,
+    AdminAccessService access, TelemetryStore telemetry) =>
+{
+    try { await antiforgery.ValidateRequestAsync(context); }
+    catch (AntiforgeryValidationException) { return Results.BadRequest(); }
+    var form = await context.Request.ReadFormAsync(context.RequestAborted);
+    var username = form["username"].ToString();
+    if (!access.Validate(username, form["password"]))
+    {
+        telemetry.Add(new AuditEvent(DateTimeOffset.UtcNow, username, "Admin login", "DevPulse", false));
+        return Results.LocalRedirect("/admin?error=invalid");
+    }
+    var identity = new ClaimsIdentity([new Claim(ClaimTypes.Name, access.Username), new Claim(ClaimTypes.Role, "Administrator")], Program.AdminScheme);
+    await context.SignInAsync(Program.AdminScheme, new ClaimsPrincipal(identity));
+    telemetry.Add(new AuditEvent(DateTimeOffset.UtcNow, access.Username, "Admin login", "DevPulse", true));
+    return Results.LocalRedirect("/admin");
+}).RequireRateLimiting("admin-login");
+app.MapPost("/admin/logout", async (HttpContext context, IAntiforgery antiforgery, TelemetryStore telemetry) =>
+{
+    try { await antiforgery.ValidateRequestAsync(context); }
+    catch (AntiforgeryValidationException) { return Results.BadRequest(); }
+    var actor = (await context.AuthenticateAsync(Program.AdminScheme)).Principal?.Identity?.Name ?? "unknown";
+    await context.SignOutAsync(Program.AdminScheme);
+    telemetry.Add(new AuditEvent(DateTimeOffset.UtcNow, actor, "Admin logout", "DevPulse", true));
+    return Results.LocalRedirect("/admin");
+});
+app.MapPost("/admin/maintenance", async (HttpContext context, IAntiforgery antiforgery,
+    MaintenanceState maintenance, TelemetryStore telemetry) =>
+{
+    var adminResult = await Program.RequireAdmin(context); if (adminResult is not null) return adminResult;
+    try { await antiforgery.ValidateRequestAsync(context); } catch (AntiforgeryValidationException) { return Results.BadRequest(); }
+    var form = await context.Request.ReadFormAsync(context.RequestAborted);
+    var enabled = bool.TryParse(form["enabled"], out var value) && value;
+    DateTimeOffset? until = DateTimeOffset.TryParse(form["until"], out var parsed) ? parsed : null;
+    maintenance.Set(enabled, form["message"], until);
+    var actor = (await context.AuthenticateAsync(Program.AdminScheme)).Principal?.Identity?.Name ?? "unknown";
+    telemetry.Add(new AuditEvent(DateTimeOffset.UtcNow, actor, enabled ? "Enable maintenance" : "Disable maintenance", "Website", true));
+    return Results.LocalRedirect("/admin");
+}).RequireRateLimiting("admin-actions");
+app.MapPost("/admin/process/terminate", async (HttpContext context, IAntiforgery antiforgery,
+    AdministrationService administration, TelemetryStore telemetry) =>
+{
+    var denied = await Program.RequireAdmin(context); if (denied is not null) return denied;
+    try { await antiforgery.ValidateRequestAsync(context); } catch (AntiforgeryValidationException) { return Results.BadRequest(); }
+    var form = await context.Request.ReadFormAsync(context.RequestAborted);
+    var processId = int.TryParse(form["processId"], out var id) ? id : 0;
+    var success = administration.Terminate(processId);
+    var actor = (await context.AuthenticateAsync(Program.AdminScheme)).Principal?.Identity?.Name ?? "unknown";
+    telemetry.Add(new AuditEvent(DateTimeOffset.UtcNow, actor, "Terminate process", processId.ToString(), success));
+    return Results.LocalRedirect("/admin");
+}).RequireRateLimiting("admin-actions");
+app.MapGet("/admin/export", async (HttpContext context, AdministrationService administration, TelemetryStore telemetry) =>
+{
+    var denied = await Program.RequireAdmin(context); if (denied is not null) return denied;
+    var actor = (await context.AuthenticateAsync(Program.AdminScheme)).Principal?.Identity?.Name ?? "unknown";
+    telemetry.Add(new AuditEvent(DateTimeOffset.UtcNow, actor, "Export diagnostics", "ZIP", true));
+    return Results.File(administration.ExportDiagnostics(), "application/zip", $"devpulse-diagnostics-{DateTime.UtcNow:yyyyMMdd-HHmmss}.zip");
+});
 app.Run();
-public partial class Program;
+public partial class Program
+{
+    public const string AdminScheme = "DevPulse.Admin";
+    public static async Task<IResult?> RequireAdmin(HttpContext context) =>
+        (await context.AuthenticateAsync(AdminScheme)).Succeeded ? null : Results.Unauthorized();
+}

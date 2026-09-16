@@ -1,0 +1,28 @@
+@page "/admin"
+@using Microsoft.AspNetCore.Authentication
+@using MiniProject_Everything_1.Services
+@inject AdminAccessService Access
+@inject AdministrationService Administration
+@inject MaintenanceState Maintenance
+@inject TelemetryStore Telemetry
+<PageTitle>Administration | DevPulse</PageTitle>
+<div class="admin-page"><header><p class="eyebrow">Restricted operations</p><h1>Administration</h1><p>Privileged controls are unavailable until an administrator password is configured.</p></header>
+@if(!Access.IsConfigured){<section class="admin-card"><h2>Administrator access is disabled</h2><p>Set <code>Admin__Password</code> to a secret containing at least 12 characters, then restart DevPulse. Do not commit the password.</p></section>}
+else if(!isAdmin){<section class="admin-card login-card"><h2>Administrator sign in</h2>@if(Error=="invalid"){<p class="bad" role="alert">The username or password was incorrect.</p>}<form method="post" action="/admin/login" data-enhance="false"><AntiforgeryToken/><label>Username<input name="username" autocomplete="username" required /></label><label>Password<input name="password" type="password" autocomplete="current-password" required /></label><button>Sign in</button></form></section>}
+else{
+    <div class="admin-toolbar"><strong>Signed in as @Access.Username</strong><form method="post" action="/admin/logout" data-enhance="false"><AntiforgeryToken/><button>Sign out</button></form></div>
+    <section class="admin-grid">
+        <article class="admin-card"><h2>Maintenance mode</h2><p>Current state: <strong class="@(Maintenance.Current.Enabled?"bad":"good")">@(Maintenance.Current.Enabled?"Enabled":"Disabled")</strong></p>
+            <form method="post" action="/admin/maintenance" data-enhance="false"><AntiforgeryToken/><label>Message<input name="message" value="@Maintenance.Current.Message" maxlength="300" /></label><label>Until (optional UTC)<input name="until" type="datetime-local" /></label><button name="enabled" value="true">Enable maintenance</button><button class="secondary" name="enabled" value="false">Disable</button></form></article>
+        <article class="admin-card"><h2>Diagnostics export</h2><p>Download a ZIP containing redacted deployment information, metrics, incidents, traces, maintenance state, and audit events.</p><a class="button-link" href="/admin/export" data-enhance-nav="false">Download diagnostics ZIP</a></article>
+        <article class="admin-card span-two"><h2>Heavy processes</h2><p>Termination is administrator-only and protected system processes are blocked. @if(!Administration.ProcessTerminationEnabled){<span>Set <code>Admin__AllowProcessTermination=true</code> and restart to enable this high-risk action.</span>}</p><div class="process-table">@foreach(var process in processes){<div><strong>@process.Name</strong><span>PID @process.Id</span><span>@process.MemoryMb MB</span><span>@process.Threads threads</span><form method="post" action="/admin/process/terminate" data-enhance="false"><AntiforgeryToken/><input type="hidden" name="processId" value="@process.Id"/><button class="danger" disabled="@(!Administration.CanTerminate(process))">Terminate</button></form></div>}</div></article>
+        <article class="admin-card span-two"><h2>Audit log</h2><div class="audit-table">@foreach(var item in Telemetry.Audits.Reverse().Take(100)){<div><time>@item.At.LocalDateTime.ToString("g")</time><strong>@item.Actor</strong><span>@item.Action</span><span>@item.Target</span><span class="@(item.Success?"good":"bad")">@(item.Success?"Succeeded":"Failed")</span></div>}</div></article>
+    </section>
+}
+</div>
+@code{
+    [CascadingParameter] public HttpContext? HttpContext {get;set;}
+    [SupplyParameterFromQuery(Name="error")] public string? Error {get;set;}
+    private bool isAdmin;private IReadOnlyList<ProcessInfo> processes=[];
+    protected override async Task OnInitializedAsync(){if(HttpContext is not null){isAdmin=(await HttpContext.AuthenticateAsync(Program.AdminScheme)).Succeeded;if(isAdmin)processes=Administration.Processes();}}
+}
