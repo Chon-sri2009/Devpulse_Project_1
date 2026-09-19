@@ -20,7 +20,7 @@ Diagnostics describe the machine running DevPulse. A hosted deployment reports i
 - **Overview:** API health, process metrics, live CPU/memory/thread charts, host information, disk charts, folder usage, and TCP scanning.
 - **Operations:** owner-allowlisted HTTP/TCP watchlist, ping matrix, DNS lookup, TLS certificate expiry, database connectivity, and live log tailing.
 - **Telemetry:** persisted metric history, request traces, threshold incidents, deployment identity, and optional OTLP export.
-- **Inspectors:** collapsible JSON explorer, SHA-256 file hashing, password-based AES-256-GCM file encryption/decryption, local JWT decoding, and a bounded HTTP load tester.
+- **Inspectors:** public-URL JSON explorer, SHA-256 file hashing, password-based AES-256-GCM file encryption/decryption, local JWT decoding, and a bounded HTTP load tester.
 - **Administration:** separate administrator cookie, process listing/termination, maintenance mode, audit history, and redacted diagnostics ZIP export.
 - **Alerts:** memory, disk, and request-latency thresholds with in-app incidents plus optional HTTPS webhook and SMTP delivery.
 - **Spotify:** protected OAuth/PKCE sessions, saved-album library and playback, Web Playback SDK browser audio, live progress, track/episode metadata, artwork, devices, seek/volume/playback controls, and rate-limit handling.
@@ -94,7 +94,9 @@ Configure the administrator password through user-secrets or the hosting secret 
 dotnet user-secrets set "Admin:Password" "A-unique-password-of-at-least-12-characters"
 ```
 
-HTTP targets, network hosts, ports, logs, and databases cannot be supplied freely by visitors. They must be placed in the owner-controlled allowlists. This prevents the diagnostic server from becoming a general network proxy or load generator. The load tester is additionally capped at 25 requests and five workers by default. Log output and uploaded file contents are never included in request telemetry; uploaded files are processed in memory and are not stored.
+Load-test targets, network hosts, ports, logs, and databases cannot be supplied freely by visitors. They must be placed in the owner-controlled allowlists. This prevents the diagnostic server from becoming a general network proxy or load generator. The load tester is additionally capped at 25 requests and five workers by default.
+
+The JSON explorer accepts a user-entered public HTTP or HTTPS URL and uses configured URLs as suggestions. Its outbound client disables redirects, resolves and pins the destination address at connection time, and rejects loopback, private, link-local, and reserved targets to prevent server-side request forgery. Owner-approved URLs remain available for intentionally configured private services. JSON responses are limited to 2 MB. Log output and uploaded file contents are never included in request telemetry; uploaded files are processed in memory and are not stored.
 
 The file encryption tool creates authenticated `.devpulse` packages with AES-256-GCM and a key derived from the user's password. Use a unique password of at least 12 characters. The password is not stored, and a lost password cannot be recovered. SHA-256 remains available for integrity checking; hashes cannot be decrypted.
 

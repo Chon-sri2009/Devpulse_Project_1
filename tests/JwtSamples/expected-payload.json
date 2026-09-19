@@ -1,0 +1,12 @@
+{
+  "sub": "devpulse-demo-user",
+  "name": "DevPulse Tester",
+  "role": "viewer",
+  "features": [
+    "metrics",
+    "ports",
+    "spotify"
+  ],
+  "iat": 1767225600,
+  "exp": 1893456000
+}

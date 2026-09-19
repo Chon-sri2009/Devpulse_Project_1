@@ -1,0 +1,30 @@
+DEVPULSE JWT INSPECTOR TEST
+===========================
+
+Successful decode
+-----------------
+1. Open sample-unsigned.jwt in a text editor.
+2. Copy the entire token. Keep it on one line.
+3. Start DevPulse and open /tools.
+4. Paste the token into the JWT Inspector.
+5. Select "Decode token".
+6. Compare the displayed Header with expected-header.json.
+7. Compare the displayed Payload with expected-payload.json.
+
+Error handling
+--------------
+1. Open invalid-token.jwt.
+2. Copy and paste its contents into the JWT Inspector.
+3. Select "Decode token".
+4. DevPulse should report that the header or payload is not valid Base64URL JSON.
+
+Security note
+-------------
+The sample uses "alg": "none" and has no cryptographic signature. It is for
+decoding demonstrations only and must never be accepted for authentication.
+
+The DevPulse JWT Inspector only displays the encoded header and payload. It does
+not verify the signature, issuer, audience, or expiry. Decoding a token does not
+prove that the token is genuine or safe.
+
+Do not paste real production access tokens into a public/shared deployment.

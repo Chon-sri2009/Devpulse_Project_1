@@ -31,8 +31,11 @@ public sealed class DiagnosticToolsService(OperationsSettings settings, IHttpCli
     public async Task<string> FetchJsonAsync(string url, CancellationToken ct)
     {
         const int maxBytes = 2_000_000;
-        EnsureUrl(url);
-        using var response = await clients.CreateClient("Diagnostics").GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
+        var uri = PublicHttpTarget.Parse(url);
+        var approved = IsApprovedUrl(uri);
+        if (!approved) await PublicHttpTarget.EnsurePublicAsync(uri, ct);
+        using var response = await clients.CreateClient(approved ? "Diagnostics" : "PublicDiagnostics")
+            .GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, ct);
         response.EnsureSuccessStatusCode();
         if (response.Content.Headers.ContentLength > maxBytes) throw new InvalidOperationException("JSON response exceeds the 2 MB limit.");
         await using var input = await response.Content.ReadAsStreamAsync(ct);
@@ -47,13 +50,20 @@ public sealed class DiagnosticToolsService(OperationsSettings settings, IHttpCli
             await limited.WriteAsync(buffer.AsMemory(0, read), ct);
         }
         limited.Position = 0;
-        using var document = JsonDocument.Parse(limited.ToArray());
-        return JsonSerializer.Serialize(document.RootElement, new JsonSerializerOptions { WriteIndented = true });
+        try
+        {
+            using var document = JsonDocument.Parse(limited.ToArray());
+            return JsonSerializer.Serialize(document.RootElement, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (JsonException)
+        {
+            throw new InvalidOperationException("The URL did not return valid JSON.");
+        }
     }
 
     public async Task<LoadTestResult> LoadTestAsync(string url, int requests, int concurrency, CancellationToken ct)
     {
-        EnsureUrl(url);
+        EnsureApprovedUrl(url);
         requests = Math.Clamp(requests, 1, Math.Max(1, settings.LoadTestMaxRequests));
         concurrency = Math.Clamp(concurrency, 1, Math.Min(requests, Math.Max(1, settings.LoadTestMaxConcurrency)));
         var timings = new System.Collections.Concurrent.ConcurrentBag<long>(); int succeeded = 0, failed = 0;
@@ -239,5 +249,6 @@ public sealed class DiagnosticToolsService(OperationsSettings settings, IHttpCli
         }
         return output.ToArray();
     }
-    private void EnsureUrl(string url) { if (!ApprovedUrls.Contains(url, StringComparer.OrdinalIgnoreCase)) throw new InvalidOperationException("URL is not in the owner allowlist."); }
+    private bool IsApprovedUrl(Uri uri) => ApprovedUrls.Any(value => Uri.TryCreate(value, UriKind.Absolute, out var approved) && approved == uri);
+    private void EnsureApprovedUrl(string url) { if (!ApprovedUrls.Contains(url, StringComparer.OrdinalIgnoreCase)) throw new InvalidOperationException("URL is not in the owner allowlist."); }
 }

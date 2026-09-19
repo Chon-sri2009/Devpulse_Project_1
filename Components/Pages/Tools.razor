@@ -10,8 +10,10 @@
 <div class="tools-page"><header><p class="eyebrow">Bounded local utilities</p><h1>Data inspectors</h1><p>Inspect data and approved HTTP targets. Uploaded files are processed in this server circuit and are not stored.</p></header>
     @if(error is not null){<p class="notice" role="alert">@error</p>}
     <section class="tools-grid">
-        <article class="tool-card span-two"><h2>JSON Data Explorer</h2><p>Fetch up to 2 MB from an owner-approved public JSON API.</p>
-            @if(ToolsService.ApprovedUrls.Count==0){<p>No approved URLs configured.</p>}else{<select class="form-select" @bind="jsonUrl">@foreach(var url in ToolsService.ApprovedUrls){<option value="@url">@url</option>}</select><button class="action" disabled="@busy" @onclick="FetchJson">Fetch JSON</button>}
+        <article class="tool-card span-two"><h2>JSON Data Explorer</h2><p>Fetch and explore up to 2 MB from a public JSON endpoint.</p>
+            <div class="url-controls"><input class="form-control" type="url" list="approved-json-urls" @bind="jsonUrl" @bind:event="oninput" placeholder="https://api.example.com/data" aria-label="Public JSON URL" /><button class="action" disabled="@busy" @onclick="FetchJson">Fetch JSON</button></div>
+            <datalist id="approved-json-urls">@foreach(var url in ToolsService.ApprovedUrls){<option value="@url"></option>}</datalist>
+            <small>Enter any public HTTP or HTTPS JSON endpoint. A missing scheme defaults to HTTPS. Local and private network addresses are blocked.</small>
             @if(json is not null){<div class="tree"><JsonTree Value="json.Value" /></div>}
         </article>
         <article class="tool-card"><h2>SHA-256 File Inspector</h2><p>Hash locally in this server circuit. Maximum file size: 25 MB.</p><InputFile OnChange="HashFile" />

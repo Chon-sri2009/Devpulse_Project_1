@@ -338,6 +338,43 @@ var tests = new List<(string Name, Func<Task> Run)>
         catch (InvalidOperationException) { return; }
         throw new InvalidOperationException("Expected allowlist rejection");
     }),
+    ("Public JSON URLs accept a domain without a scheme", async () =>
+    {
+        string? requested = null;
+        var tools = new DiagnosticToolsService(new(), new TestHttpFactory(request =>
+        {
+            requested = request.RequestUri!.AbsoluteUri;
+            return JsonResponse("{\"status\":\"ok\"}");
+        }));
+        var json = await tools.FetchJsonAsync("93.184.216.34/data", default);
+        Check(requested == "https://93.184.216.34/data" && json.Contains("ok"));
+    }),
+    ("Public JSON URLs block local and private targets", async () =>
+    {
+        foreach (var value in new[] { "http://127.0.0.1/data", "http://10.0.0.1/data", "http://[::1]/data", "http://[fc00::1]/data" })
+        {
+            var uri = PublicHttpTarget.Parse(value);
+            try { await PublicHttpTarget.EnsurePublicAsync(uri, default); }
+            catch (InvalidOperationException) { continue; }
+            throw new InvalidOperationException($"Expected private target rejection for {value}");
+        }
+    }),
+    ("Public address classification rejects non-public ranges", () =>
+    {
+        Check(PublicHttpTarget.IsPublicAddress(IPAddress.Parse("8.8.8.8")));
+        Check(PublicHttpTarget.IsPublicAddress(IPAddress.Parse("2606:4700:4700::1111")));
+        Check(!PublicHttpTarget.IsPublicAddress(IPAddress.Parse("169.254.1.1")));
+        Check(!PublicHttpTarget.IsPublicAddress(IPAddress.Parse("172.16.0.1")));
+        Check(!PublicHttpTarget.IsPublicAddress(IPAddress.Parse("192.168.1.1")));
+        Check(!PublicHttpTarget.IsPublicAddress(IPAddress.Parse("fe80::1")));
+        return Task.CompletedTask;
+    }),
+    ("Owner-approved JSON URLs can intentionally target a private service", async () =>
+    {
+        var options = new OperationsSettings { ApprovedUrls = ["http://127.0.0.1/data"] };
+        var tools = new DiagnosticToolsService(options, new TestHttpFactory(_ => JsonResponse("{\"source\":\"approved\"}")));
+        Check((await tools.FetchJsonAsync(options.ApprovedUrls[0], default)).Contains("approved"));
+    }),
     ("Load tester enforces configured request and concurrency bounds", async () =>
     {
         var count = 0; var options = new OperationsSettings { ApprovedUrls = ["https://example.test/data"], LoadTestMaxRequests = 3, LoadTestMaxConcurrency = 2 };
