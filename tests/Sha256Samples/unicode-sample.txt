@@ -1,0 +1,4 @@
+DevPulse Unicode hash test
+English: system healthy
+Thai: ระบบพร้อมใช้งาน
+Symbols: ✓ ⚙ ♪

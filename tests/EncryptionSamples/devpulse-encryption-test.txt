@@ -1,0 +1,11 @@
+DevPulse AES-256-GCM encryption test
+
+If you can read this after decrypting the .devpulse package, the round-trip worked.
+
+Test markers:
+- ASCII: DevPulse-2026
+- Numbers: 0123456789
+- Symbols: !@#$%^&*()_+-=[]{}
+- Unicode: สวัสดี · café · 日本語 · 🔐
+
+This file contains demonstration data only. It contains no passwords, tokens, or credentials.

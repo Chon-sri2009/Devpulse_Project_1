@@ -20,7 +20,7 @@ Diagnostics describe the machine running DevPulse. A hosted deployment reports i
 - **Overview:** API health, process metrics, live CPU/memory/thread charts, host information, disk charts, folder usage, and TCP scanning.
 - **Operations:** owner-allowlisted HTTP/TCP watchlist, ping matrix, DNS lookup, TLS certificate expiry, database connectivity, and live log tailing.
 - **Telemetry:** persisted metric history, request traces, threshold incidents, deployment identity, and optional OTLP export.
-- **Inspectors:** collapsible JSON explorer, SHA-256 file hashing, local JWT decoding, and a bounded HTTP load tester.
+- **Inspectors:** collapsible JSON explorer, SHA-256 file hashing, password-based AES-256-GCM file encryption/decryption, local JWT decoding, and a bounded HTTP load tester.
 - **Administration:** separate administrator cookie, process listing/termination, maintenance mode, audit history, and redacted diagnostics ZIP export.
 - **Alerts:** memory, disk, and request-latency thresholds with in-app incidents plus optional HTTPS webhook and SMTP delivery.
 - **Spotify:** protected OAuth/PKCE sessions, saved-album library and playback, Web Playback SDK browser audio, live progress, track/episode metadata, artwork, devices, seek/volume/playback controls, and rate-limit handling.
@@ -94,7 +94,9 @@ Configure the administrator password through user-secrets or the hosting secret 
 dotnet user-secrets set "Admin:Password" "A-unique-password-of-at-least-12-characters"
 ```
 
-HTTP targets, network hosts, ports, logs, and databases cannot be supplied freely by visitors. They must be placed in the owner-controlled allowlists. This prevents the diagnostic server from becoming a general network proxy or load generator. The load tester is additionally capped at 25 requests and five workers by default. Log output and uploaded file contents are never included in request telemetry; uploaded files are streamed for hashing and are not stored.
+HTTP targets, network hosts, ports, logs, and databases cannot be supplied freely by visitors. They must be placed in the owner-controlled allowlists. This prevents the diagnostic server from becoming a general network proxy or load generator. The load tester is additionally capped at 25 requests and five workers by default. Log output and uploaded file contents are never included in request telemetry; uploaded files are processed in memory and are not stored.
+
+The file encryption tool creates authenticated `.devpulse` packages with AES-256-GCM and a key derived from the user's password. Use a unique password of at least 12 characters. The password is not stored, and a lost password cannot be recovered. SHA-256 remains available for integrity checking; hashes cannot be decrypted.
 
 For email alerts, configure `Alerts__Smtp__Host`, `Port`, `Username`, `Password`, `From`, `To`, and `EnableSsl` through secrets/environment settings. Webhook alerts accept HTTPS only. Redis health sends an unauthenticated `PING`; other database kinds verify TCP acceptance without running queries or exposing credentials.
 

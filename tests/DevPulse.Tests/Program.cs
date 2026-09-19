@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Sockets;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -262,6 +263,36 @@ var tests = new List<(string Name, Func<Task> Run)>
     {
         await using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("abc"));
         Check(await DiagnosticToolsService.Sha256Async(stream, default) == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+    }),
+    ("AES-GCM file encryption round-trips bytes and the original name", async () =>
+    {
+        var original = System.Text.Encoding.UTF8.GetBytes("DevPulse protected file test");
+        await using var input = new MemoryStream(original);
+        var encrypted = await DiagnosticToolsService.EncryptFileAsync(input, "sample.txt", "correct horse battery staple", default);
+        Check(encrypted.FileName == "sample.txt.devpulse" && !encrypted.Contents.SequenceEqual(original));
+        await using var package = new MemoryStream(encrypted.Contents);
+        var decrypted = await DiagnosticToolsService.DecryptFileAsync(package, "correct horse battery staple", default);
+        try { Check(decrypted.FileName == "sample.txt" && decrypted.Contents.SequenceEqual(original)); }
+        finally { CryptographicOperations.ZeroMemory(decrypted.Contents); }
+    }),
+    ("AES-GCM file decryption rejects a wrong password", async () =>
+    {
+        await using var input = new MemoryStream([1, 2, 3, 4]);
+        var encrypted = await DiagnosticToolsService.EncryptFileAsync(input, "sample.bin", "correct horse battery staple", default);
+        await using var package = new MemoryStream(encrypted.Contents);
+        try { await DiagnosticToolsService.DecryptFileAsync(package, "another secure password", default); }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("incorrect")) { return; }
+        throw new InvalidOperationException("Expected wrong-password rejection");
+    }),
+    ("AES-GCM file decryption rejects tampering", async () =>
+    {
+        await using var input = new MemoryStream([1, 2, 3, 4]);
+        var encrypted = await DiagnosticToolsService.EncryptFileAsync(input, "sample.bin", "correct horse battery staple", default);
+        encrypted.Contents[^1] ^= 0xff;
+        await using var package = new MemoryStream(encrypted.Contents);
+        try { await DiagnosticToolsService.DecryptFileAsync(package, "correct horse battery staple", default); }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("changed")) { return; }
+        throw new InvalidOperationException("Expected tamper rejection");
     }),
     ("JWT inspector decodes local JSON", () =>
     {

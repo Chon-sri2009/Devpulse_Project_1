@@ -1,0 +1,12 @@
+{
+  "application": "DevPulse",
+  "purpose": "AES-256-GCM encryption round-trip test",
+  "createdFor": "demonstration only",
+  "enabled": true,
+  "values": [
+    10,
+    20,
+    30
+  ],
+  "message": "The decrypted JSON should match this original file exactly."
+}

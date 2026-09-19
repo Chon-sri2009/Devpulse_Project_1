@@ -1,0 +1,44 @@
+DEVPULSE FILE ENCRYPTION TEST
+================================
+
+Test files
+----------
+1. devpulse-encryption-test.txt
+2. sample-settings.json
+
+Successful encryption and decryption
+------------------------------------
+1. Start DevPulse and open /tools.
+2. Find "AES-256-GCM File Encryption".
+3. Select one of the sample files.
+4. Enter this demonstration password in both password fields:
+
+   DevPulse-Test-Password-2026!
+
+5. Select "Encrypt and download".
+6. The browser should download a file ending in .devpulse.
+7. Select the downloaded .devpulse file.
+8. Enter the same password. Password confirmation is not needed for decryption.
+9. Select "Decrypt and download".
+10. Open the restored file and compare it with the original.
+11. For an exact check, use the SHA-256 File Inspector on both the original and
+    restored file. The two hashes must be identical.
+
+Wrong-password test
+-------------------
+1. Select the downloaded .devpulse file.
+2. Enter a different password of at least 12 characters.
+3. Select "Decrypt and download".
+4. DevPulse should reject it with an incorrect-password or changed-file message.
+
+Tamper-detection test
+---------------------
+1. Make a copy of the downloaded .devpulse file.
+2. Change any byte in the copied file with a hex editor.
+3. Try to decrypt the changed copy using the correct password.
+4. DevPulse should reject it and should not produce a restored file.
+
+Important
+---------
+The password above is public test data. Never use it for real files.
+For real files, use a unique password and store it safely. DevPulse cannot recover a lost password.

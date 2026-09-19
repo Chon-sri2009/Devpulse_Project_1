@@ -1,0 +1,16 @@
+DevPulse SHA-256 File Inspector test values
+
+Upload each sample file through Inspectors > SHA-256 File Inspector.
+The displayed lowercase hash should match the value below.
+
+json-sample.json
+04b24a013aadd7fd64976bcf35403a9ef801a95760198a4e4cdf77e3997149b5
+
+plain-text.txt
+d18b32523ec4ad19302e59815257950833a4d6f074a1888a39d244ea6b086406
+
+unicode-sample.txt
+7e5e03609d47fc926be03b41fe7a7fc9bd5bfd1461ce55f7a05c5a16824791e4
+
+If even one byte changes, the SHA-256 value should change substantially.
+Do not edit and save a sample before testing it.

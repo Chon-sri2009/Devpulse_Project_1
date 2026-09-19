@@ -1,11 +1,13 @@
 @page "/tools"
+@using System.Security.Cryptography
 @using System.Text.Json
 @using MiniProject_Everything_1.Components.Shared
 @using MiniProject_Everything_1.Services
 @inject DiagnosticToolsService ToolsService
+@inject IJSRuntime JS
 @rendermode InteractiveServer
 <PageTitle>Inspectors | DevPulse</PageTitle>
-<div class="tools-page"><header><p class="eyebrow">Bounded local utilities</p><h1>Data inspectors</h1><p>Inspect JSON, files, tokens, and approved HTTP targets without sending uploaded content elsewhere.</p></header>
+<div class="tools-page"><header><p class="eyebrow">Bounded local utilities</p><h1>Data inspectors</h1><p>Inspect data and approved HTTP targets. Uploaded files are processed in this server circuit and are not stored.</p></header>
     @if(error is not null){<p class="notice" role="alert">@error</p>}
     <section class="tools-grid">
         <article class="tool-card span-two"><h2>JSON Data Explorer</h2><p>Fetch up to 2 MB from an owner-approved public JSON API.</p>
@@ -14,6 +16,22 @@
         </article>
         <article class="tool-card"><h2>SHA-256 File Inspector</h2><p>Hash locally in this server circuit. Maximum file size: 25 MB.</p><InputFile OnChange="HashFile" />
             @if(hash is not null){<div class="hash-result"><strong>@fileName</strong><code>@hash</code><small>@fileSize bytes</small></div>}
+        </article>
+        <article class="tool-card span-two">
+            <h2>AES-256-GCM File Encryption</h2>
+            <p>Encrypt a file into a <code>.devpulse</code> package, or decrypt that package with the same password. Files are processed in memory and are not stored. Maximum original file size: 25 MB.</p>
+            <div class="crypto-grid">
+                <label class="file-picker">File <InputFile OnChange="SelectCryptoFile" /></label>
+                <label>Password <input class="form-control" type="password" autocomplete="new-password" maxlength="1024" @bind="cryptoPassword" placeholder="At least 12 characters" /></label>
+                <label>Confirm password <input class="form-control" type="password" autocomplete="new-password" maxlength="1024" @bind="cryptoPasswordConfirmation" placeholder="Required when encrypting" /></label>
+            </div>
+            @if(cryptoFile is not null){<p class="selected-file"><strong>@cryptoFile.Name</strong> · @cryptoFile.Size bytes</p>}
+            <div class="crypto-actions">
+                <button class="action" disabled="@(busy || cryptoFile is null)" @onclick="EncryptSelectedFile">Encrypt and download</button>
+                <button class="action secondary" disabled="@(busy || cryptoFile is null)" @onclick="DecryptSelectedFile">Decrypt and download</button>
+            </div>
+            <p class="crypto-warning">Use a unique password and keep it safe. DevPulse cannot recover the file if you lose it.</p>
+            @if(cryptoStatus is not null){<p class="success" role="status">@cryptoStatus</p>}
         </article>
         <article class="tool-card"><h2>JWT Inspector</h2><p>Decode header and payload locally. Signatures are not validated.</p><textarea class="form-control token-input" @bind="jwt" @bind:event="oninput" maxlength="65536" placeholder="Paste a JWT"></textarea><button class="action" @onclick="DecodeJwt">Decode token</button>
             @if(jwtHeader is not null){<h3>Header</h3><pre>@jwtHeader</pre><h3>Payload</h3><pre>@jwtPayload</pre>}
@@ -25,11 +43,34 @@
     </section>
 </div>
 @code{
-    private bool busy;private string? error,jsonUrl,loadUrl,hash,fileName,jwt,jwtHeader,jwtPayload;private long fileSize;private JsonElement? json;private LoadTestResult? load;private int requestCount=10,concurrency=2;
+    private bool busy;private string? error,jsonUrl,loadUrl,hash,fileName,jwt,jwtHeader,jwtPayload,cryptoStatus;private string cryptoPassword="",cryptoPasswordConfirmation="";private long fileSize;private IBrowserFile? cryptoFile;private JsonElement? json;private LoadTestResult? load;private int requestCount=10,concurrency=2;
     protected override void OnInitialized(){jsonUrl=ToolsService.ApprovedUrls.FirstOrDefault();loadUrl=jsonUrl;}
     private async Task Run(Func<Task> action){if(busy)return;busy=true;error=null;try{await action();}catch(Exception ex)when(ex is not OperationCanceledException){error=ex.Message;}finally{busy=false;}}
     private Task FetchJson()=>Run(async()=>{var text=await ToolsService.FetchJsonAsync(jsonUrl!,default);using var document=JsonDocument.Parse(text);json=document.RootElement.Clone();});
     private async Task HashFile(InputFileChangeEventArgs args){error=null;hash=null;try{var file=args.File;fileName=file.Name;fileSize=file.Size;await using var stream=file.OpenReadStream(25*1024*1024);hash=await DiagnosticToolsService.Sha256Async(stream,default);}catch(Exception ex){error=ex.Message;}}
+    private void SelectCryptoFile(InputFileChangeEventArgs args){error=null;cryptoStatus=null;cryptoFile=args.File;if(cryptoFile.Size>DiagnosticToolsService.MaxEncryptedPackageBytes){error="File exceeds the 25 MB encryption limit.";cryptoFile=null;}}
+    private Task EncryptSelectedFile()=>Run(async()=>
+    {
+        cryptoStatus=null;
+        if(cryptoFile is null)throw new InvalidOperationException("Choose a file first.");
+        if(cryptoPassword!=cryptoPasswordConfirmation)throw new InvalidOperationException("The password confirmation does not match.");
+        await using var input=cryptoFile.OpenReadStream(DiagnosticToolsService.MaxCryptoFileBytes);
+        var result=await DiagnosticToolsService.EncryptFileAsync(input,cryptoFile.Name,cryptoPassword,default);
+        try{await Download(result);}finally{CryptographicOperations.ZeroMemory(result.Contents);}
+        cryptoPassword=cryptoPasswordConfirmation="";
+        cryptoStatus=$"Encrypted {cryptoFile.Name}. The protected download is ready.";
+    });
+    private Task DecryptSelectedFile()=>Run(async()=>
+    {
+        cryptoStatus=null;
+        if(cryptoFile is null)throw new InvalidOperationException("Choose a .devpulse file first.");
+        await using var input=cryptoFile.OpenReadStream(DiagnosticToolsService.MaxEncryptedPackageBytes);
+        var result=await DiagnosticToolsService.DecryptFileAsync(input,cryptoPassword,default);
+        try{await Download(result);}finally{CryptographicOperations.ZeroMemory(result.Contents);}
+        cryptoPassword=cryptoPasswordConfirmation="";
+        cryptoStatus=$"Decrypted {result.FileName}. The restored download is ready.";
+    });
+    private async Task Download(FileCryptoResult result){using var stream=new MemoryStream(result.Contents,false);using var reference=new DotNetStreamReference(stream);await JS.InvokeVoidAsync("devPulseFiles.downloadFromStream",result.FileName,reference);}
     private void DecodeJwt(){error=null;var result=DiagnosticToolsService.DecodeJwt(jwt??"");if(result.Error is not null){error=result.Error;jwtHeader=jwtPayload=null;}else{jwtHeader=result.Header;jwtPayload=result.Payload;}}
     private Task RunLoadTest()=>Run(async()=>load=await ToolsService.LoadTestAsync(loadUrl!,requestCount,concurrency,default));
 }

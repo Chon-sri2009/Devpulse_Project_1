@@ -1,0 +1,6 @@
+{
+  "project": "DevPulse",
+  "feature": "SHA-256 File Inspector",
+  "test": true,
+  "sequence": 256
+}
