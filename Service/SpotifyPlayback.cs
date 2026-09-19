@@ -3,6 +3,20 @@ using System.Text.Json;
 namespace MiniProject_Everything_1.Services;
 
 public sealed record SpotifyDevice(string Id, string Name, bool Active, bool Restricted, bool SupportsVolume, int? Volume);
+public sealed record SpotifyAlbum(string Uri, string Name, string Artists, string? Image, DateTimeOffset? AddedAt)
+{
+    public static bool IsSafeUri(string? value)
+    {
+        const string prefix = "spotify:album:";
+        return value is { Length: > 14 } && value.StartsWith(prefix, StringComparison.Ordinal)
+            && value[prefix.Length..].All(char.IsAsciiLetterOrDigit);
+    }
+}
+public sealed record SpotifyAlbumPage(IReadOnlyList<SpotifyAlbum> Items, int Offset, int Limit, int Total)
+{
+    public bool HasPrevious => Offset > 0;
+    public bool HasNext => Offset + Items.Count < Total;
+}
 public sealed record SpotifyPlayback(string Title, string Creator, string? Image, string? Link,
     bool Playing, int ProgressMs, int DurationMs, SpotifyDevice? Device, IReadOnlySet<string> Disallowed)
 {
@@ -34,6 +48,31 @@ public sealed record SpotifyPlayback(string Title, string Creator, string? Image
     {
         var devices = Property(json, "devices");
         return devices.ValueKind == JsonValueKind.Array ? devices.EnumerateArray().Select(ParseDevice).ToList() : [];
+    }
+    public static SpotifyAlbumPage ParseSavedAlbums(JsonElement json)
+    {
+        var items = Property(json, "items");
+        var albums = new List<SpotifyAlbum>();
+        if (items.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in items.EnumerateArray())
+            {
+                var album = Property(item, "album");
+                var uri = Text(album, "uri");
+                if (!SpotifyAlbum.IsSafeUri(uri)) continue;
+                var artists = Property(album, "artists");
+                var creator = artists.ValueKind == JsonValueKind.Array
+                    ? string.Join(", ", artists.EnumerateArray().Select(x => Text(x, "name")).Where(x => x.Length > 0))
+                    : "";
+                var images = Property(album, "images");
+                var image = images.ValueKind == JsonValueKind.Array && images.GetArrayLength() > 0
+                    ? SafeUrl(Text(images[0], "url"), "i.scdn.co") : null;
+                DateTimeOffset? addedAt = DateTimeOffset.TryParse(Text(item, "added_at"), out var parsed) ? parsed : null;
+                albums.Add(new(uri, Text(album, "name", "Untitled album"), creator, image, addedAt));
+            }
+        }
+        return new(albums, Number(json, "offset") ?? 0, Number(json, "limit") ?? albums.Count,
+            Number(json, "total") ?? albums.Count);
     }
     private static SpotifyDevice ParseDevice(JsonElement d) => new(Text(d, "id"), Text(d, "name", "Spotify device"),
         Flag(d, "is_active"), Flag(d, "is_restricted"), Flag(d, "supports_volume"), Number(d, "volume_percent"));

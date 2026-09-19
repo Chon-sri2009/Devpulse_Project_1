@@ -57,6 +57,58 @@
                     @if (browserError is not null) { <p role="alert" class="browser-error">@browserError</p> }
                 </section>
 
+                <section class="album-library" aria-busy="@albumsLoading">
+                    <div class="album-library-header">
+                        <div>
+                            <p class="connection-label">Your Spotify library</p>
+                            <h2>Saved albums</h2>
+                            <p>Select an album to play it on the currently selected Spotify device.</p>
+                        </div>
+                        @if (albumPage is not null) { <span class="album-count">@albumPage.Total saved</span> }
+                    </div>
+                    @if (albumError is not null) { <p role="alert" class="error-message">@albumError</p> }
+                    @if (albumMessage is not null) { <p role="status" class="album-message">@albumMessage</p> }
+                    @if (albumsLoading && albumPage is null)
+                    {
+                        <p role="status">Loading your albums…</p>
+                    }
+                    else if (albumPage is { Items.Count: 0 })
+                    {
+                        <p>Your Spotify library does not contain any saved albums yet.</p>
+                    }
+                    else if (albumPage is not null)
+                    {
+                        <div class="album-grid">
+                            @foreach (var album in albumPage.Items)
+                            {
+                                <article class="album-card">
+                                    @if (album.Image is not null)
+                                    {
+                                        <img src="@album.Image" alt="Cover for @album.Name" width="160" height="160" loading="lazy" />
+                                    }
+                                    else
+                                    {
+                                        <div class="album-placeholder" aria-hidden="true">♫</div>
+                                    }
+                                    <div class="album-details">
+                                        <h3 title="@album.Name">@album.Name</h3>
+                                        <p title="@album.Artists">@album.Artists</p>
+                                        <button class="spotify-button connect-button" disabled="@(busy || albumsLoading)"
+                                            @onclick='() => PlayAlbum(album)'>Play album</button>
+                                    </div>
+                                </article>
+                            }
+                        </div>
+                        <div class="album-pagination">
+                            <button class="spotify-button secondary-button" disabled="@(!albumPage.HasPrevious || albumsLoading)"
+                                @onclick="PreviousAlbums">Previous</button>
+                            <span>Albums @(albumPage.Offset + 1)–@(albumPage.Offset + albumPage.Items.Count) of @albumPage.Total</span>
+                            <button class="spotify-button secondary-button" disabled="@(!albumPage.HasNext || albumsLoading)"
+                                @onclick="NextAlbums">Next</button>
+                        </div>
+                    }
+                </section>
+
                 <section class="player-panel" aria-busy="@busy">
                     @if (error is not null) { <p role="alert" class="error-message">@error</p> }
                     @if (needsLogin)
@@ -129,14 +181,15 @@
     private Task? liveLoop;
     private System.Security.Claims.ClaimsPrincipal? user;
     private SpotifyPlayback? playback;
+    private SpotifyAlbumPage? albumPage;
     private IReadOnlyList<SpotifyDevice> devices = [];
     private IJSObjectReference? spotifyModule;
     private DotNetObjectReference<Spotify>? selfReference;
-    private string? error, browserError;
+    private string? error, browserError, albumError, albumMessage;
     private string browserStatus = "Connecting browser player…";
     private string browserDeviceId = "";
     private string selectedDevice = "";
-    private bool busy, loaded, needsLogin, pageVisible = true;
+    private bool busy, loaded, needsLogin, pageVisible = true, albumsLoading;
     private int? volumeEdit, pendingSeek;
     private int progressAnchor;
     private DateTimeOffset progressAnchoredAt = DateTimeOffset.UtcNow;
@@ -157,6 +210,7 @@
         if (user.Identity?.IsAuthenticated != true) return;
         await Sync(includeDevices: true, interactive: false);
         await InitializeBrowserPlayer();
+        await LoadAlbums(0);
         liveLoop = LiveLoopAsync();
     }
 
@@ -195,6 +249,60 @@
 
     private Task Refresh() => Sync(includeDevices: true, interactive: true);
 
+    private async Task LoadAlbums(int offset)
+    {
+        if (albumsLoading || user is null || lifetime.IsCancellationRequested) return;
+        albumsLoading = true;
+        albumError = null;
+        albumMessage = null;
+        StateHasChanged();
+        try
+        {
+            var result = await Player.GetSavedAlbumsAsync(user, Math.Max(0, offset), 12, lifetime.Token);
+            if (!result.Success)
+            {
+                needsLogin = result.NeedsLogin;
+                albumError = result.Status == 403
+                    ? "Disconnect and reconnect Spotify once to grant access to your saved albums."
+                    : result.Error;
+                return;
+            }
+            albumPage = result.Data is { } data ? SpotifyPlayback.ParseSavedAlbums(data) : new([], 0, 12, 0);
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
+        catch (Exception ex)
+        {
+            Logger.LogWarning("Spotify album library failed: {ExceptionType}", ex.GetType().Name);
+            albumError = "Your saved albums could not be loaded. Try again.";
+        }
+        finally
+        {
+            albumsLoading = false;
+            if (!lifetime.IsCancellationRequested) await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private Task PreviousAlbums() => albumPage is null
+        ? Task.CompletedTask : LoadAlbums(Math.Max(0, albumPage.Offset - albumPage.Limit));
+    private Task NextAlbums() => albumPage is null
+        ? Task.CompletedTask : LoadAlbums(albumPage.Offset + albumPage.Limit);
+
+    private async Task PlayAlbum(SpotifyAlbum album)
+    {
+        var succeeded = false;
+        await Run(async () =>
+        {
+            var target = string.IsNullOrWhiteSpace(selectedDevice) ? playback?.Device?.Id : selectedDevice;
+            var result = await Player.PlayAlbumAsync(user!, album.Uri, target, lifetime.Token);
+            if (!Accept(result)) return;
+            succeeded = true;
+        }, interactive: true);
+        if (!succeeded) return;
+        albumMessage = $"Starting {album.Name}…";
+        nextSync = DateTimeOffset.MinValue;
+        StateHasChanged();
+    }
+
     private Task Sync(bool includeDevices, bool interactive) => Run(async () =>
     {
         var current = await Player.GetPlaybackAsync(user!, lifetime.Token);
@@ -213,6 +321,7 @@
         if (!devices.Any(d => d.Id == selectedDevice))
             selectedDevice = playback?.Device?.Id ?? devices.FirstOrDefault(d => !d.Restricted)?.Id ?? "";
         error = null;
+        albumMessage = null;
         updated = DateTimeOffset.UtcNow;
         nextSync = DateTimeOffset.UtcNow.AddSeconds(4);
     }, interactive);

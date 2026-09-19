@@ -23,7 +23,7 @@ Diagnostics describe the machine running DevPulse. A hosted deployment reports i
 - **Inspectors:** collapsible JSON explorer, SHA-256 file hashing, local JWT decoding, and a bounded HTTP load tester.
 - **Administration:** separate administrator cookie, process listing/termination, maintenance mode, audit history, and redacted diagnostics ZIP export.
 - **Alerts:** memory, disk, and request-latency thresholds with in-app incidents plus optional HTTPS webhook and SMTP delivery.
-- **Spotify:** protected OAuth/PKCE sessions, Web Playback SDK browser audio, live progress, track/episode metadata, artwork, devices, seek/volume/playback controls, and rate-limit handling.
+- **Spotify:** protected OAuth/PKCE sessions, saved-album library and playback, Web Playback SDK browser audio, live progress, track/episode metadata, artwork, devices, seek/volume/playback controls, and rate-limit handling.
 - Health endpoint, diagnostics production gate, friendly error/404 pages, persistent encrypted sessions, CI, and production smoke tests.
 
 ## Spotify setup
@@ -43,7 +43,7 @@ dotnet user-secrets set "Spotify:ClientSecret" "YOUR_CLIENT_SECRET"
 
 Restart, open /spotify, and connect. Playback controls and browser audio require Spotify Premium. Development-mode apps may require allowed users in the developer dashboard; consult Spotify's current restrictions. Some external devices do not support volume control.
 
-The page can control existing Spotify Connect devices or create a `DevPulse Web Player` that plays audio in the browser. Select **Play in this browser** to activate and transfer playback. Browser playback uses SDK state events; the progress display updates locally every second and reconciles with Spotify every four seconds while the tab is visible. External-device changes are near-real-time because Spotify does not provide playback webhooks. Existing users must disconnect and reconnect once after this upgrade to grant the new `streaming` and `user-read-email` scopes.
+The page can browse the signed-in user's saved albums and play one on the selected device. It can control existing Spotify Connect devices or create a `DevPulse Web Player` that plays audio in the browser. Select **Play in this browser** to activate and transfer playback. Browser playback uses SDK state events; the progress display updates locally every second and reconciles with Spotify every four seconds while the tab is visible. External-device changes are near-real-time because Spotify does not provide playback webhooks. Existing users must disconnect and reconnect once after this upgrade to grant the `streaming`, `user-read-email`, and `user-library-read` scopes.
 
 Tokens are encrypted on the server; the cookie contains only an opaque session ID. Sessions last at most seven days. Disconnect invalidates the app session, including other open tabs. To revoke the OAuth grant completely, remove DevPulse from Spotify account Apps settings.
 
@@ -138,7 +138,7 @@ GitHub Actions runs build, regression checks, formatting, smoke checks and publi
 5. Configure a unique administrator password and test privileged actions behind HTTPS; enable process termination only if you explicitly need it.
 6. Review every operations allowlist, log path, database target, and alert destination.
 7. Optionally configure an OTLP collector and SMTP/webhook alerts.
-8. Test real Spotify login, external-device control, and **Play in this browser** using a Premium account.
+8. Test real Spotify login, saved-album paging/playback, external-device control, and **Play in this browser** using a Premium account.
 
 ## References
 

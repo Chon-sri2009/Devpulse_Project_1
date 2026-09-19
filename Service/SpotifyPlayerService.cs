@@ -26,6 +26,17 @@ public sealed class SpotifyPlayerService(IHttpClientFactory clients, SpotifySett
         SendAsync(user, HttpMethod.Get, "me/player?additional_types=track,episode", null, ct);
     public Task<SpotifyReply> GetDevicesAsync(ClaimsPrincipal user, CancellationToken ct) =>
         SendAsync(user, HttpMethod.Get, "me/player/devices", null, ct);
+    public Task<SpotifyReply> GetSavedAlbumsAsync(ClaimsPrincipal user, int offset, int limit, CancellationToken ct) =>
+        SendAsync(user, HttpMethod.Get,
+            $"me/albums?limit={Math.Clamp(limit, 1, 50)}&offset={Math.Max(0, offset)}", null, ct);
+
+    public Task<SpotifyReply> PlayAlbumAsync(ClaimsPrincipal user, string albumUri, string? deviceId, CancellationToken ct)
+    {
+        if (!SpotifyAlbum.IsSafeUri(albumUri))
+            return Task.FromResult(new SpotifyReply(400, Error: "Choose a valid album from your Spotify library."));
+        var suffix = string.IsNullOrWhiteSpace(deviceId) ? "" : "?device_id=" + Uri.EscapeDataString(deviceId);
+        return SendAsync(user, HttpMethod.Put, "me/player/play" + suffix, new { context_uri = albumUri }, ct);
+    }
 
     public async Task<SpotifyBrowserTokenReply> GetBrowserTokenAsync(ClaimsPrincipal user, CancellationToken ct)
     {

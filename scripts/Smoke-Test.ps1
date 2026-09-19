@@ -94,7 +94,7 @@ try {
     $location = [uri]::UnescapeDataString($r.Headers.Location.AbsoluteUri)
     if (!$location.Contains("redirect_uri=https://127.0.0.1:$port/signin-spotify")) { throw 'Trusted-proxy callback scheme failed.' }
     if (!$location.Contains('code_challenge=')) { throw 'OAuth PKCE missing.' }
-    if (!$location.Contains('streaming') -or !$location.Contains('user-read-email')) { throw 'Browser playback OAuth scopes missing.' }
+    if (!$location.Contains('streaming') -or !$location.Contains('user-read-email') -or !$location.Contains('user-library-read')) { throw 'Spotify browser/library OAuth scopes missing.' }
     $r.Dispose()
     $request.Dispose()
     Write-Output 'PASS OAuth redirect and trusted proxy'

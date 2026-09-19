@@ -130,6 +130,7 @@ if (spotify.IsConfigured)
         options.UsePkce = true;
         options.Scope.Add("user-read-private");
         options.Scope.Add("user-read-email");
+        options.Scope.Add("user-library-read");
         options.Scope.Add("user-read-playback-state");
         options.Scope.Add("user-read-currently-playing");
         options.Scope.Add("user-modify-playback-state");

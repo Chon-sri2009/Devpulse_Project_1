@@ -107,6 +107,27 @@ var tests = new List<(string Name, Func<Task> Run)>
         var token = await fixture.Player.GetBrowserTokenAsync(user, default);
         Check(token.Success && token.AccessToken == "browser-token" && fixture.Requests.Count == 1);
     }),
+    ("Saved albums are paged and parsed safely", async () =>
+    {
+        using var fixture = new SpotifyFixture(); var user = await fixture.Login();
+        fixture.Replies.Enqueue(_ => JsonResponse("""{"offset":12,"limit":12,"total":13,"items":[{"added_at":"2026-01-01T00:00:00Z","album":{"name":"Album","uri":"spotify:album:ABC123","artists":[{"name":"Artist"}],"images":[{"url":"https://i.scdn.co/image/cover"}]}},{"album":{"name":"Unsafe","uri":"https://attacker.example/album"}}]}"""));
+        var result = await fixture.Player.GetSavedAlbumsAsync(user, 12, 12, default);
+        var page = SpotifyPlayback.ParseSavedAlbums(result.Data!.Value);
+        Check(result.Success && fixture.Requests[0].Uri.EndsWith("me/albums?limit=12&offset=12"));
+        Check(page.Items.Count == 1 && page.Items[0].Name == "Album" && page.Items[0].Artists == "Artist");
+        Check(page.HasPrevious && !page.HasNext && page.Items[0].Image == "https://i.scdn.co/image/cover");
+    }),
+    ("Album playback accepts only Spotify album URIs", async () =>
+    {
+        using var fixture = new SpotifyFixture(); var user = await fixture.Login();
+        Check((await fixture.Player.PlayAlbumAsync(user, "https://attacker.example/album", "device", default)).Status == 400);
+        Check(fixture.Requests.Count == 0);
+        fixture.Replies.Enqueue(_ => new(HttpStatusCode.NoContent));
+        Check((await fixture.Player.PlayAlbumAsync(user, "spotify:album:ABC123", "device&other=value", default)).Success);
+        Check(fixture.Requests[0].Uri.EndsWith("me/player/play?device_id=device%26other%3Dvalue"));
+        using var body = JsonDocument.Parse(fixture.Requests[0].Body);
+        Check(body.RootElement.GetProperty("context_uri").GetString() == "spotify:album:ABC123");
+    }),
     ("Spotify 204 means idle player", async () =>
     {
         using var fixture = new SpotifyFixture();
