@@ -13,6 +13,7 @@ public sealed record FileCryptoResult(string FileName, byte[] Contents);
 
 public sealed class DiagnosticToolsService(OperationsSettings settings, IHttpClientFactory clients)
 {
+    private readonly SemaphoreSlim publicLoadTestGate = new(1, 1);
     public const int MaxCryptoFileBytes = 25 * 1024 * 1024;
     public const int MaxEncryptedPackageBytes = MaxCryptoFileBytes + 1024;
     private const int SaltSize = 16;
@@ -63,27 +64,43 @@ public sealed class DiagnosticToolsService(OperationsSettings settings, IHttpCli
 
     public async Task<LoadTestResult> LoadTestAsync(string url, int requests, int concurrency, CancellationToken ct)
     {
-        EnsureApprovedUrl(url);
+        var uri = PublicHttpTarget.Parse(url);
+        var approved = IsApprovedUrl(uri);
+        if (!approved) await PublicHttpTarget.EnsurePublicAsync(uri, ct);
         requests = Math.Clamp(requests, 1, Math.Max(1, settings.LoadTestMaxRequests));
         concurrency = Math.Clamp(concurrency, 1, Math.Min(requests, Math.Max(1, settings.LoadTestMaxConcurrency)));
-        var timings = new System.Collections.Concurrent.ConcurrentBag<long>(); int succeeded = 0, failed = 0;
-        var total = Stopwatch.StartNew(); using var gate = new SemaphoreSlim(concurrency);
-        var tasks = Enumerable.Range(0, requests).Select(async _ =>
+        var publicGateHeld = false;
+        if (!approved)
         {
-            await gate.WaitAsync(ct); var watch = Stopwatch.StartNew();
-            try
+            publicGateHeld = await publicLoadTestGate.WaitAsync(0, ct);
+            if (!publicGateHeld) throw new InvalidOperationException("Another public load test is already running. Try again shortly.");
+        }
+        var timings = new System.Collections.Concurrent.ConcurrentBag<long>(); int succeeded = 0, failed = 0;
+        try
+        {
+            var total = Stopwatch.StartNew(); using var gate = new SemaphoreSlim(concurrency);
+            var tasks = Enumerable.Range(0, requests).Select(async _ =>
             {
-                using var request = new HttpRequestMessage(HttpMethod.Get, url);
-                request.Headers.UserAgent.ParseAdd("DevPulse-LoadTest/1.0");
-                using var response = await clients.CreateClient("LoadTest").SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
-                if (response.IsSuccessStatusCode) Interlocked.Increment(ref succeeded); else Interlocked.Increment(ref failed);
-            }
-            catch (HttpRequestException) { Interlocked.Increment(ref failed); }
-            catch (OperationCanceledException) when (!ct.IsCancellationRequested) { Interlocked.Increment(ref failed); }
-            finally { timings.Add(watch.ElapsedMilliseconds); gate.Release(); }
-        });
-        await Task.WhenAll(tasks);
-        return new(requests, succeeded, failed, timings.Average(), timings.Min(), timings.Max(), (int)total.ElapsedMilliseconds);
+                await gate.WaitAsync(ct); var watch = Stopwatch.StartNew();
+                try
+                {
+                    using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+                    request.Headers.UserAgent.ParseAdd("DevPulse-LoadTest/1.0");
+                    using var response = await clients.CreateClient(approved ? "LoadTest" : "PublicLoadTest")
+                        .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+                    if (response.IsSuccessStatusCode) Interlocked.Increment(ref succeeded); else Interlocked.Increment(ref failed);
+                }
+                catch (HttpRequestException) { Interlocked.Increment(ref failed); }
+                catch (OperationCanceledException) when (!ct.IsCancellationRequested) { Interlocked.Increment(ref failed); }
+                finally { timings.Add(watch.ElapsedMilliseconds); gate.Release(); }
+            });
+            await Task.WhenAll(tasks);
+            return new(requests, succeeded, failed, timings.Average(), timings.Min(), timings.Max(), (int)total.ElapsedMilliseconds);
+        }
+        finally
+        {
+            if (publicGateHeld) publicLoadTestGate.Release();
+        }
     }
 
     public LogSnapshot ReadLog(string file)
@@ -250,5 +267,4 @@ public sealed class DiagnosticToolsService(OperationsSettings settings, IHttpCli
         return output.ToArray();
     }
     private bool IsApprovedUrl(Uri uri) => ApprovedUrls.Any(value => Uri.TryCreate(value, UriKind.Absolute, out var approved) && approved == uri);
-    private void EnsureApprovedUrl(string url) { if (!ApprovedUrls.Contains(url, StringComparer.OrdinalIgnoreCase)) throw new InvalidOperationException("URL is not in the owner allowlist."); }
 }

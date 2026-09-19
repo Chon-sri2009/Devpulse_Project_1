@@ -38,14 +38,17 @@
         <article class="tool-card"><h2>JWT Inspector</h2><p>Decode header and payload locally. Signatures are not validated.</p><textarea class="form-control token-input" @bind="jwt" @bind:event="oninput" maxlength="65536" placeholder="Paste a JWT"></textarea><button class="action" @onclick="DecodeJwt">Decode token</button>
             @if(jwtHeader is not null){<h3>Header</h3><pre>@jwtHeader</pre><h3>Payload</h3><pre>@jwtPayload</pre>}
         </article>
-        <article class="tool-card span-two"><h2>Mini HTTP Load Tester</h2><p>GET requests are limited to approved URLs, 25 requests, five concurrent workers, and a 10-second client timeout.</p>
-            @if(ToolsService.ApprovedUrls.Count>0){<div class="load-controls"><select class="form-select" @bind="loadUrl">@foreach(var url in ToolsService.ApprovedUrls){<option value="@url">@url</option>}</select><label>Requests <input type="number" min="1" max="25" @bind="requestCount" /></label><label>Concurrency <input type="number" min="1" max="5" @bind="concurrency" /></label><button class="action" disabled="@busy" @onclick="RunLoadTest">Run bounded test</button></div>}
+        <article class="tool-card span-two"><h2>Mini HTTP Load Tester</h2><p>Send bounded GET requests to a public HTTP or HTTPS URL. Tests are limited to 25 requests, five concurrent workers, and a 10-second client timeout.</p>
+            <div class="load-controls"><input class="form-control" type="url" list="approved-load-urls" @bind="loadUrl" @bind:event="oninput" placeholder="https://your-site.example/health" aria-label="Public load-test URL" /><label>Requests <input type="number" min="1" max="25" @bind="requestCount" /></label><label>Concurrency <input type="number" min="1" max="5" @bind="concurrency" /></label><button class="action" disabled="@(busy || !loadAuthorized)" @onclick="RunLoadTest">Run bounded test</button></div>
+            <datalist id="approved-load-urls">@foreach(var url in ToolsService.ApprovedUrls){<option value="@url"></option>}</datalist>
+            <label class="permission-check"><input type="checkbox" @bind="loadAuthorized" /> I own this target or have permission to test it.</label>
+            <small>Local and private network addresses are blocked unless the owner explicitly configured the exact URL. Only one arbitrary public load test can run at a time.</small>
             @if(load is not null){<div class="load-summary"><div><span>Succeeded</span><strong>@load.Succeeded</strong></div><div><span>Failed</span><strong>@load.Failed</strong></div><div><span>Average</span><strong>@load.AverageMs.ToString("F1") ms</strong></div><div><span>Range</span><strong>@load.MinMs–@load.MaxMs ms</strong></div><div><span>Total</span><strong>@load.DurationMs ms</strong></div></div>}
         </article>
     </section>
 </div>
 @code{
-    private bool busy;private string? error,jsonUrl,loadUrl,hash,fileName,jwt,jwtHeader,jwtPayload,cryptoStatus;private string cryptoPassword="",cryptoPasswordConfirmation="";private long fileSize;private IBrowserFile? cryptoFile;private JsonElement? json;private LoadTestResult? load;private int requestCount=10,concurrency=2;
+    private bool busy,loadAuthorized;private string? error,jsonUrl,loadUrl,hash,fileName,jwt,jwtHeader,jwtPayload,cryptoStatus;private string cryptoPassword="",cryptoPasswordConfirmation="";private long fileSize;private IBrowserFile? cryptoFile;private JsonElement? json;private LoadTestResult? load;private int requestCount=10,concurrency=2;
     protected override void OnInitialized(){jsonUrl=ToolsService.ApprovedUrls.FirstOrDefault();loadUrl=jsonUrl;}
     private async Task Run(Func<Task> action){if(busy)return;busy=true;error=null;try{await action();}catch(Exception ex)when(ex is not OperationCanceledException){error=ex.Message;}finally{busy=false;}}
     private Task FetchJson()=>Run(async()=>{var text=await ToolsService.FetchJsonAsync(jsonUrl!,default);using var document=JsonDocument.Parse(text);json=document.RootElement.Clone();});

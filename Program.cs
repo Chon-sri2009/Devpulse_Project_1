@@ -163,9 +163,11 @@ builder.Services.AddHttpClient<ApiHealthCheckService>(client => client.Timeout =
 builder.Services.AddHttpClient("Diagnostics", client => client.Timeout = TimeSpan.FromSeconds(10))
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddHttpClient("PublicDiagnostics", client => client.Timeout = TimeSpan.FromSeconds(10))
-    .ConfigurePrimaryHttpMessageHandler(PublicHttpTarget.CreateHandler);
+    .ConfigurePrimaryHttpMessageHandler(() => PublicHttpTarget.CreateHandler());
 builder.Services.AddHttpClient("LoadTest", client => client.Timeout = TimeSpan.FromSeconds(10))
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+builder.Services.AddHttpClient("PublicLoadTest", client => client.Timeout = TimeSpan.FromSeconds(10))
+    .ConfigurePrimaryHttpMessageHandler(() => PublicHttpTarget.CreateHandler(5));
 builder.Services.AddHttpClient("Alerts", client => client.Timeout = TimeSpan.FromSeconds(5));
 builder.Services.AddSingleton<SystemMetricsService>();
 builder.Services.AddSingleton<ComputerInformationService>();

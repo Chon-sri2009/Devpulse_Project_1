@@ -25,9 +25,10 @@ public static class PublicHttpTarget
         if (addresses.Length == 0) throw new InvalidOperationException("The public host could not be resolved.");
     }
 
-    public static SocketsHttpHandler CreateHandler() => new()
+    public static SocketsHttpHandler CreateHandler(int maxConnectionsPerServer = int.MaxValue) => new()
     {
         AllowAutoRedirect = false,
+        MaxConnectionsPerServer = maxConnectionsPerServer,
         PooledConnectionLifetime = TimeSpan.FromMinutes(2),
         ConnectCallback = ConnectPublicAsync
     };

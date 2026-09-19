@@ -66,7 +66,7 @@ Use user-secrets for Development credentials, or double-underscore environment v
 | Admin__AllowProcessTermination | false | Explicitly enables administrator process termination; keep disabled unless required |
 | Operations__ApprovedHosts__0 | 127.0.0.1 | Numbered host allowlist for ping, DNS, TLS and TCP checks |
 | Operations__ApprovedPorts__0 | predefined safe list | Numbered TCP port allowlist |
-| Operations__ApprovedUrls__0 | https://api.github.com | Numbered HTTP/JSON/load-test allowlist |
+| Operations__ApprovedUrls__0 | https://api.github.com | Numbered URL suggestions and trusted private-service exceptions for JSON/load testing |
 | Operations__ApprovedLogFiles__0 | empty | Exact owner-approved file paths for live tailing |
 | Operations__Databases__0__Name / Host / Port / Kind | empty | Database connectivity targets; Kind may be TCP or Redis |
 | Operations__WatchIntervalSeconds | 300 | Scheduled service-watchlist interval; set to 0 to disable |
@@ -94,9 +94,11 @@ Configure the administrator password through user-secrets or the hosting secret 
 dotnet user-secrets set "Admin:Password" "A-unique-password-of-at-least-12-characters"
 ```
 
-Load-test targets, network hosts, ports, logs, and databases cannot be supplied freely by visitors. They must be placed in the owner-controlled allowlists. This prevents the diagnostic server from becoming a general network proxy or load generator. The load tester is additionally capped at 25 requests and five workers by default.
+Network hosts, ports, logs, and databases cannot be supplied freely by visitors. They must be placed in the owner-controlled allowlists.
 
 The JSON explorer accepts a user-entered public HTTP or HTTPS URL and uses configured URLs as suggestions. Its outbound client disables redirects, resolves and pins the destination address at connection time, and rejects loopback, private, link-local, and reserved targets to prevent server-side request forgery. Owner-approved URLs remain available for intentionally configured private services. JSON responses are limited to 2 MB. Log output and uploaded file contents are never included in request telemetry; uploaded files are processed in memory and are not stored.
+
+The mini load tester accepts public HTTP or HTTPS URLs with the same network protections and configured private-service exceptions. Users must acknowledge that they own or have permission to test the target. Each run is capped at 25 GET requests, five workers, and a 10-second client timeout; only one arbitrary public run can execute at a time across the application. These controls reduce accidental abuse but do not replace authentication or a private access gateway for a production diagnostics deployment.
 
 The file encryption tool creates authenticated `.devpulse` packages with AES-256-GCM and a key derived from the user's password. Use a unique password of at least 12 characters. The password is not stored, and a lost password cannot be recovered. SHA-256 remains available for integrity checking; hashes cannot be decrypted.
 

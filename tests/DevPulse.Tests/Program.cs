@@ -375,6 +375,26 @@ var tests = new List<(string Name, Func<Task> Run)>
         var tools = new DiagnosticToolsService(options, new TestHttpFactory(_ => JsonResponse("{\"source\":\"approved\"}")));
         Check((await tools.FetchJsonAsync(options.ApprovedUrls[0], default)).Contains("approved"));
     }),
+    ("Load tester accepts an arbitrary public URL with bounded requests", async () =>
+    {
+        var count = 0; string? requested = null;
+        var options = new OperationsSettings { LoadTestMaxRequests = 3, LoadTestMaxConcurrency = 2 };
+        var tools = new DiagnosticToolsService(options, new TestHttpFactory(request =>
+        {
+            Interlocked.Increment(ref count); requested = request.RequestUri!.AbsoluteUri;
+            return new(HttpStatusCode.NoContent);
+        }));
+        var result = await tools.LoadTestAsync("93.184.216.34/health", 20, 20, default);
+        Check(result.Requested == 3 && result.Succeeded == 3 && count == 3 && requested == "https://93.184.216.34/health");
+    }),
+    ("Load tester blocks an unapproved private target", async () =>
+    {
+        var count = 0;
+        var tools = new DiagnosticToolsService(new(), new TestHttpFactory(_ => { count++; return new(HttpStatusCode.OK); }));
+        try { await tools.LoadTestAsync("http://127.0.0.1/private", 1, 1, default); }
+        catch (InvalidOperationException) { Check(count == 0); return; }
+        throw new InvalidOperationException("Expected private load-test target rejection");
+    }),
     ("Load tester enforces configured request and concurrency bounds", async () =>
     {
         var count = 0; var options = new OperationsSettings { ApprovedUrls = ["https://example.test/data"], LoadTestMaxRequests = 3, LoadTestMaxConcurrency = 2 };
