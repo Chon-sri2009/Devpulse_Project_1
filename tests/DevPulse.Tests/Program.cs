@@ -90,6 +90,22 @@ var tests = new List<(string Name, Func<Task> Run)>
     {
         using var fixture = new SpotifyFixture();
         Check((await fixture.Player.GetPlaybackAsync(new(), default)).NeedsLogin && fixture.Requests.Count == 0);
+        Check((await fixture.Player.GetBrowserTokenAsync(new(), default)).Status == 401 && fixture.Requests.Count == 0);
+    }),
+    ("Browser playback receives only the current short-lived access token", async () =>
+    {
+        using var fixture = new SpotifyFixture();
+        var token = await fixture.Player.GetBrowserTokenAsync(await fixture.Login(), default);
+        Check(token.Success && token.AccessToken == "access-token" && token.ExpiresInSeconds > 0);
+        Check(fixture.Requests.Count == 0);
+    }),
+    ("Browser playback refreshes an expiring token", async () =>
+    {
+        using var fixture = new SpotifyFixture();
+        var user = await fixture.Login(TimeSpan.FromSeconds(-10));
+        fixture.Replies.Enqueue(_ => JsonResponse("""{"access_token":"browser-token","expires_in":3600}"""));
+        var token = await fixture.Player.GetBrowserTokenAsync(user, default);
+        Check(token.Success && token.AccessToken == "browser-token" && fixture.Requests.Count == 1);
     }),
     ("Spotify 204 means idle player", async () =>
     {
@@ -151,15 +167,18 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("Playback commands use correct methods and escaped device IDs", async () =>
     {
         using var fixture = new SpotifyFixture(); var user = await fixture.Login();
-        foreach (var command in new[] { "play", "pause", "next", "previous", "volume", "transfer" })
+        foreach (var command in new[] { "play", "pause", "next", "previous", "volume", "seek", "transfer", "transfer-play" })
         {
             fixture.Replies.Enqueue(_ => new(HttpStatusCode.NoContent));
             Check((await fixture.Player.CommandAsync(user, command, "device&other=value", 42, default)).Success);
         }
-        Check(fixture.Requests.Select(r => r.Method).SequenceEqual(new[] { "PUT", "PUT", "POST", "POST", "PUT", "PUT" }));
+        Check(fixture.Requests.Select(r => r.Method).SequenceEqual(new[] { "PUT", "PUT", "POST", "POST", "PUT", "PUT", "PUT", "PUT" }));
         Check(fixture.Requests[4].Uri.Contains("volume_percent=42") && fixture.Requests[0].Uri.Contains("device%26other%3Dvalue"));
-        using var body = JsonDocument.Parse(fixture.Requests[5].Body);
+        Check(fixture.Requests[5].Uri.Contains("position_ms=42"));
+        using var body = JsonDocument.Parse(fixture.Requests[6].Body);
         Check(body.RootElement.GetProperty("device_ids")[0].GetString() == "device&other=value");
+        using var playBody = JsonDocument.Parse(fixture.Requests[7].Body);
+        Check(playBody.RootElement.GetProperty("play").GetBoolean());
     }),
     ("Invalid volume sends no request", async () =>
     {

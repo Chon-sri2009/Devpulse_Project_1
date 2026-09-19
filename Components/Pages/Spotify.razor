@@ -1,9 +1,11 @@
 @page "/spotify"
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.JSInterop
 @using MiniProject_Everything_1.Services
 @inject SpotifySettings Settings
 @inject SpotifyPlayerService Player
 @inject AuthenticationStateProvider Authentication
+@inject IJSRuntime JS
 @inject ILogger<Spotify> Logger
 @rendermode InteractiveServer
 @implements IAsyncDisposable
@@ -13,7 +15,7 @@
     <section class="spotify-hero">
         <p class="eyebrow">Spotify integration</p>
         <h1>Your music, connected.</h1>
-        <p>Control playback on your Spotify devices. Open Spotify and start a track to get connected.</p>
+        <p>Control Spotify devices in near real time or play through this browser with Spotify Premium.</p>
     </section>
     @if (!Settings.IsConfigured)
     {
@@ -32,12 +34,29 @@
                 <section class="spotify-card">
                     <span class="spotify-mark" aria-hidden="true">♫</span>
                     <div><p class="connection-label">Spotify connected</p><h2>Welcome, @auth.User.Identity?.Name</h2>
-                        <p>Playback controls require Spotify Premium and a compatible device.</p></div>
+                        <p>Playback controls and browser audio require Spotify Premium.</p></div>
                     <form method="post" action="/spotify/logout" data-enhance="false">
                         <AntiforgeryToken />
                         <button class="spotify-button disconnect-button" type="submit">Disconnect</button>
                     </form>
                 </section>
+
+                <section class="browser-player-card" aria-live="polite">
+                    <div class="browser-player-copy">
+                        <span class="status-dot @(string.IsNullOrEmpty(browserDeviceId) ? "connecting" : "ready")" aria-hidden="true"></span>
+                        <div>
+                            <p class="connection-label">Browser playback</p>
+                            <h2>@browserStatus</h2>
+                            <p>Turn this tab into a Spotify Connect device and play audio through the browser.</p>
+                        </div>
+                    </div>
+                    <button id="spotify-browser-activate" class="spotify-button connect-button"
+                        disabled="@(busy || string.IsNullOrEmpty(browserDeviceId))" @onclick="UseBrowserPlayer">
+                        Play in this browser
+                    </button>
+                    @if (browserError is not null) { <p role="alert" class="browser-error">@browserError</p> }
+                </section>
+
                 <section class="player-panel" aria-busy="@busy">
                     @if (error is not null) { <p role="alert" class="error-message">@error</p> }
                     @if (needsLogin)
@@ -45,7 +64,7 @@
                         <a href="/spotify/login" data-enhance-nav="false" class="spotify-button connect-button">Reconnect Spotify</a>
                     }
                     @if (!loaded) { <p role="status">Loading playback…</p> }
-                    else if (playback is null) { <h2>Nothing playing yet</h2><p>Open Spotify and play something, then refresh.</p> }
+                    else if (playback is null) { <h2>Nothing playing yet</h2><p>Choose Play in this browser, or open Spotify on another device and start a track.</p> }
                     else
                     {
                         <div class="now-playing">
@@ -57,8 +76,9 @@
                         </div>
                         @if (playback.DurationMs > 0)
                         {
-                            <progress max="@playback.DurationMs" value="@Math.Clamp(playback.ProgressMs, 0, playback.DurationMs)" aria-label="Track progress"></progress>
-                            <p class="progress-label">@Duration(playback.ProgressMs) / @Duration(playback.DurationMs)</p>
+                            <input class="track-progress" type="range" min="0" max="@playback.DurationMs" value="@CurrentProgress"
+                                disabled="@(busy || !CanControl)" @onchange="SeekPlayback" aria-label="Seek through the current track" />
+                            <p class="progress-label">@Duration(CurrentProgress) / @Duration(playback.DurationMs)</p>
                         }
                     }
                     <div class="spotify-actions">
@@ -80,7 +100,7 @@
                         </select>
                         <button class="spotify-button secondary-button" disabled="@(busy || needsLogin || string.IsNullOrEmpty(selectedDevice) || Blocked("transferring_playback"))"
                             @onclick='() => Command("transfer")'>Use this device</button>
-                        @if (devices.Count == 0 && loaded) { <p>No devices found. Open a Spotify app on your phone or computer.</p> }
+                        @if (devices.Count == 0 && loaded) { <p>No devices found. Open a Spotify app or wait for the browser player to connect.</p> }
                         <label for="spotify-volume">Volume: @(volumeEdit ?? playback?.Device?.Volume ?? 0)%</label>
                         <input id="spotify-volume" type="range" min="0" max="100" value="@(volumeEdit ?? playback?.Device?.Volume ?? 0)"
                             @onchange="EditVolume" disabled="@(busy || !CanControl || playback?.Device?.SupportsVolume != true)" />
@@ -88,13 +108,13 @@
                             @onclick='() => Command("volume")'>Set volume</button>
                         @if (playback?.Device?.SupportsVolume == false) { <p>This device does not support remote volume changes.</p> }
                     </div>
-                    <p class="refresh-note">Playback refreshes every 10 seconds while this page is open. Commands may take a moment to appear.</p>
-                    @if (updated is not null) { <p class="refresh-note">Last refreshed @updated.Value.ToLocalTime().ToString("HH:mm:ss")</p> }
+                    <p class="refresh-note">Progress updates every second. Spotify state synchronizes every four seconds while this tab is visible.</p>
+                    @if (updated is not null) { <p class="refresh-note">Last synchronized @updated.Value.ToLocalTime().ToString("HH:mm:ss")</p> }
                 </section>
             </Authorized>
             <NotAuthorized>
                 <section class="spotify-card"><span class="spotify-mark" aria-hidden="true">♫</span>
-                    <div><h2>Connect your account</h2><p>Sign in to view your music and control your own Spotify devices.</p></div>
+                    <div><h2>Connect your account</h2><p>Sign in to view your music, play in this browser, and control your Spotify devices.</p></div>
                     <a class="spotify-button connect-button" href="/spotify/login" data-enhance-nav="false">Connect Spotify</a>
                 </section>
             </NotAuthorized>
@@ -105,17 +125,28 @@
 @code {
     [SupplyParameterFromQuery(Name = "error")] public string? LoginError { get; set; }
     private readonly CancellationTokenSource lifetime = new();
-    private Task? poll;
+    private readonly SemaphoreSlim operationGate = new(1, 1);
+    private Task? liveLoop;
     private System.Security.Claims.ClaimsPrincipal? user;
     private SpotifyPlayback? playback;
     private IReadOnlyList<SpotifyDevice> devices = [];
-    private string? error;
+    private IJSObjectReference? spotifyModule;
+    private DotNetObjectReference<Spotify>? selfReference;
+    private string? error, browserError;
+    private string browserStatus = "Connecting browser player…";
+    private string browserDeviceId = "";
     private string selectedDevice = "";
-    private bool busy, loaded, needsLogin;
-    private int? volumeEdit;
+    private bool busy, loaded, needsLogin, pageVisible = true;
+    private int? volumeEdit, pendingSeek;
+    private int progressAnchor;
+    private DateTimeOffset progressAnchoredAt = DateTimeOffset.UtcNow;
+    private DateTimeOffset nextSync = DateTimeOffset.MinValue;
+    private DateTimeOffset lastDeviceSync = DateTimeOffset.MinValue;
     private DateTimeOffset? updated;
     private bool CanControl => !needsLogin && playback?.Device is { Restricted: false, Id.Length: > 0 };
     private bool Blocked(string action) => playback?.Disallowed.Contains(action) == true;
+    private int CurrentProgress => playback is null ? 0 : Math.Clamp(progressAnchor +
+        (playback.Playing ? (int)(DateTimeOffset.UtcNow - progressAnchoredAt).TotalMilliseconds : 0), 0, playback.DurationMs);
     private static string Duration(int ms) => TimeSpan.FromMilliseconds(Math.Max(0, ms)).ToString(@"m\:ss");
     private void EditVolume(ChangeEventArgs e) { if (int.TryParse(e.Value?.ToString(), out var n)) volumeEdit = Math.Clamp(n, 0, 100); }
 
@@ -124,69 +155,284 @@
         if (!firstRender || !Settings.IsConfigured) return;
         user = (await Authentication.GetAuthenticationStateAsync()).User;
         if (user.Identity?.IsAuthenticated != true) return;
-        await Refresh();
-        poll = PollAsync();
+        await Sync(includeDevices: true, interactive: false);
+        await InitializeBrowserPlayer();
+        liveLoop = LiveLoopAsync();
     }
-    private async Task PollAsync()
+
+    private async Task InitializeBrowserPlayer()
     {
         try
         {
-            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(10));
+            spotifyModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/spotify-player.js");
+            selfReference = DotNetObjectReference.Create(this);
+            await spotifyModule.InvokeAsync<bool>("initialize", selfReference, "spotify-browser-activate");
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException)
+        {
+            Logger.LogWarning("Spotify browser player initialization failed: {ExceptionType}", ex.GetType().Name);
+            browserStatus = "Browser player unavailable";
+            browserError = "The Spotify browser player could not start. Refresh the page or try another supported browser.";
+            StateHasChanged();
+        }
+    }
+
+    private async Task LiveLoopAsync()
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
             while (await timer.WaitForNextTickAsync(lifetime.Token))
             {
-                if (!needsLogin) await InvokeAsync(Refresh);
+                if (!pageVisible) continue;
+                if (playback?.Playing == true) await InvokeAsync(StateHasChanged);
+                if (!needsLogin && DateTimeOffset.UtcNow >= nextSync)
+                    await InvokeAsync(() => Sync(includeDevices: false, interactive: false));
             }
         }
         catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
     }
-    private Task Refresh() => Run(async () =>
+
+    private Task Refresh() => Sync(includeDevices: true, interactive: true);
+
+    private Task Sync(bool includeDevices, bool interactive) => Run(async () =>
     {
         var current = await Player.GetPlaybackAsync(user!, lifetime.Token);
         if (!Accept(current)) return;
-        playback = current.Data is { } data ? SpotifyPlayback.Parse(data) : null;
-        var available = await Player.GetDevicesAsync(user!, lifetime.Token);
-        if (!Accept(available)) return;
-        devices = available.Data is { } list ? SpotifyPlayback.ParseDevices(list) : [];
+        SetPlayback(current.Data is { } data ? SpotifyPlayback.Parse(data) : null);
+
+        if (includeDevices || DateTimeOffset.UtcNow - lastDeviceSync >= TimeSpan.FromSeconds(30))
+        {
+            var available = await Player.GetDevicesAsync(user!, lifetime.Token);
+            if (!Accept(available)) return;
+            devices = available.Data is { } list ? SpotifyPlayback.ParseDevices(list) : [];
+            AddBrowserDevice();
+            lastDeviceSync = DateTimeOffset.UtcNow;
+        }
+
         if (!devices.Any(d => d.Id == selectedDevice))
             selectedDevice = playback?.Device?.Id ?? devices.FirstOrDefault(d => !d.Restricted)?.Id ?? "";
+        error = null;
         updated = DateTimeOffset.UtcNow;
-    });
-    private Task Command(string command) => Run(async () =>
+        nextSync = DateTimeOffset.UtcNow.AddSeconds(4);
+    }, interactive);
+
+    private async Task Command(string command)
     {
-        var result = await Player.CommandAsync(user!, command,
-            command == "transfer" ? selectedDevice : playback?.Device?.Id,
-            command == "volume" ? volumeEdit ?? playback?.Device?.Volume ?? 0 : null, lifetime.Token);
-        if (!Accept(result)) return;
+        var succeeded = false;
+        await Run(async () =>
+        {
+            var result = await Player.CommandAsync(user!, command,
+                command is "transfer" or "transfer-play" ? selectedDevice : playback?.Device?.Id,
+                command == "volume" ? volumeEdit ?? playback?.Device?.Volume ?? 0
+                    : command == "seek" ? pendingSeek ?? CurrentProgress : null,
+                lifetime.Token);
+            if (!Accept(result)) return;
+            succeeded = true;
+        }, interactive: true);
+
+        if (!succeeded) return;
+        ApplyOptimistic(command);
         volumeEdit = null;
-        // Spotify applies player actions asynchronously; the regular refresh reconciles the result.
+        pendingSeek = null;
         updated = null;
-    });
+        nextSync = DateTimeOffset.MinValue;
+        StateHasChanged();
+    }
+
+    private Task UseBrowserPlayer()
+    {
+        if (string.IsNullOrEmpty(browserDeviceId)) return Task.CompletedTask;
+        selectedDevice = browserDeviceId;
+        browserError = null;
+        return Command("transfer-play");
+    }
+
+    private async Task SeekPlayback(ChangeEventArgs e)
+    {
+        if (!int.TryParse(e.Value?.ToString(), out var value) || playback is null) return;
+        pendingSeek = Math.Clamp(value, 0, playback.DurationMs);
+        await Command("seek");
+    }
+
+    private void ApplyOptimistic(string command)
+    {
+        if (playback is null) return;
+        var position = command == "seek" ? pendingSeek ?? CurrentProgress : CurrentProgress;
+        playback = command switch
+        {
+            "play" => playback with { Playing = true, ProgressMs = position },
+            "pause" => playback with { Playing = false, ProgressMs = position },
+            "next" or "previous" => playback with { ProgressMs = 0 },
+            "seek" => playback with { ProgressMs = position },
+            "volume" when playback.Device is not null => playback with
+            {
+                Device = playback.Device with { Volume = volumeEdit ?? playback.Device.Volume }
+            },
+            _ => playback
+        };
+        progressAnchor = playback.ProgressMs;
+        progressAnchoredAt = DateTimeOffset.UtcNow;
+    }
+
     private bool Accept(SpotifyReply result)
     {
         if (result.Success) return true;
         error = result.Error;
         needsLogin = result.NeedsLogin;
+        if (result.RetryAfterSeconds > 0)
+            nextSync = DateTimeOffset.UtcNow.AddSeconds(result.RetryAfterSeconds);
         return false;
     }
-    private async Task Run(Func<Task> action)
+
+    private void SetPlayback(SpotifyPlayback? value)
     {
-        if (busy || user is null || lifetime.IsCancellationRequested) return;
-        busy = true;
-        error = null;
-        StateHasChanged();
-        try { await action(); }
+        playback = value;
+        progressAnchor = value?.ProgressMs ?? 0;
+        progressAnchoredAt = DateTimeOffset.UtcNow;
+    }
+
+    private void AddBrowserDevice()
+    {
+        if (string.IsNullOrEmpty(browserDeviceId) || devices.Any(d => d.Id == browserDeviceId)) return;
+        devices = devices.Append(new SpotifyDevice(browserDeviceId, "DevPulse Web Player", false, false, true, 50)).ToList();
+    }
+
+    private async Task Run(Func<Task> action, bool interactive)
+    {
+        var entered = false;
+        try
+        {
+            if (interactive)
+            {
+                busy = true;
+                await operationGate.WaitAsync(lifetime.Token);
+                entered = true;
+                error = null;
+            }
+            else
+            {
+                entered = await operationGate.WaitAsync(0, lifetime.Token);
+                if (!entered) return;
+            }
+            await action();
+        }
         catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
         catch (Exception ex)
         {
             Logger.LogWarning("Spotify UI operation failed: {ExceptionType}", ex.GetType().Name);
             error = "Could not complete the request. Please try again.";
         }
-        finally { loaded = true; busy = false; if (!lifetime.IsCancellationRequested) StateHasChanged(); }
+        finally
+        {
+            loaded = true;
+            if (entered) operationGate.Release();
+            if (interactive) busy = false;
+            if (!lifetime.IsCancellationRequested) await InvokeAsync(StateHasChanged);
+        }
     }
+
+    [JSInvokable]
+    public Task OnBrowserPlayerReady(string deviceId) => InvokeAsync(() =>
+    {
+        browserDeviceId = deviceId;
+        browserStatus = "Browser player ready";
+        browserError = null;
+        AddBrowserDevice();
+        StateHasChanged();
+    });
+
+    [JSInvokable]
+    public Task OnBrowserPlayerNotReady(string _) => InvokeAsync(() =>
+    {
+        browserDeviceId = "";
+        browserStatus = "Browser player disconnected";
+        StateHasChanged();
+    });
+
+    [JSInvokable]
+    public Task OnBrowserPlayerStateChanged(BrowserPlaybackUpdate? state) => InvokeAsync(() =>
+    {
+        if (state is null || string.IsNullOrEmpty(browserDeviceId)) return;
+        var image = SafeSpotifyImage(state.Image);
+        var link = playback?.Title == state.Title ? playback.Link : null;
+        var volume = playback?.Device?.Id == browserDeviceId ? playback.Device.Volume : 50;
+        SetPlayback(new SpotifyPlayback(state.Title, state.Creator, image, link, !state.Paused,
+            state.Position, state.Duration, new SpotifyDevice(browserDeviceId, "DevPulse Web Player", true, false, true, volume),
+            state.Disallowed.ToHashSet(StringComparer.Ordinal)));
+        selectedDevice = browserDeviceId;
+        devices = devices.Select(d => d with { Active = d.Id == browserDeviceId }).ToList();
+        AddBrowserDevice();
+        updated = DateTimeOffset.UtcNow;
+        nextSync = DateTimeOffset.UtcNow.AddSeconds(4);
+        StateHasChanged();
+    });
+
+    [JSInvokable]
+    public Task OnBrowserPlayerError(BrowserPlayerError playerError) => InvokeAsync(() =>
+    {
+        browserStatus = playerError.Kind switch
+        {
+            "authentication" => "Reconnect required",
+            "account" => "Spotify Premium required",
+            "autoplay" => "Waiting for your click",
+            _ => "Browser player unavailable"
+        };
+        browserError = playerError.Kind switch
+        {
+            "authentication" => "Disconnect and reconnect Spotify to grant the browser playback permission.",
+            "account" => "Spotify reports that this account cannot use browser playback. Confirm that this signed-in account has Premium.",
+            "initialization" => "This browser could not initialize protected Spotify audio. Try current Chrome, Edge, Firefox, or Safari.",
+            "autoplay" => "Your browser blocked automatic audio. Select Play in this browser again.",
+            _ => "Spotify browser playback stopped. Refresh the page and try again."
+        };
+        StateHasChanged();
+    });
+
+    [JSInvokable]
+    public Task OnSpotifyVisibilityChanged(bool visible) => InvokeAsync(async () =>
+    {
+        pageVisible = visible;
+        if (visible && !needsLogin)
+        {
+            nextSync = DateTimeOffset.MinValue;
+            await Sync(includeDevices: false, interactive: false);
+        }
+    });
+
+    private static string? SafeSpotifyImage(string? value) =>
+        Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.Scheme == "https" && uri.Host == "i.scdn.co" ? value : null;
+
     public async ValueTask DisposeAsync()
     {
         await lifetime.CancelAsync();
-        if (poll is not null) await poll;
+        if (liveLoop is not null) await liveLoop;
+        if (spotifyModule is not null)
+        {
+            try { await spotifyModule.InvokeVoidAsync("disconnect"); }
+            catch (JSDisconnectedException) { }
+            await spotifyModule.DisposeAsync();
+        }
+        selfReference?.Dispose();
+        operationGate.Dispose();
         lifetime.Dispose();
+    }
+
+    public sealed class BrowserPlaybackUpdate
+    {
+        public bool Paused { get; set; }
+        public int Position { get; set; }
+        public int Duration { get; set; }
+        public string Title { get; set; } = "Nothing playing";
+        public string Creator { get; set; } = "";
+        public string? Image { get; set; }
+        public string Uri { get; set; } = "";
+        public string[] Disallowed { get; set; } = [];
+    }
+
+    public sealed class BrowserPlayerError
+    {
+        public string Kind { get; set; } = "playback";
+        public string Message { get; set; } = "";
     }
 }

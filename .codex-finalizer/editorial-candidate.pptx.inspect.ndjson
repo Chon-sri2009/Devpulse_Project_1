@@ -1,0 +1,97 @@
+{"kind":"deck","id":"pr/4p44bm","name":"Deck"}
+{"kind":"layout","layoutId":"5d1d48fa-6717-45e7-8032-61552e85c14c","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"7916010c-39ba-4107-8336-f35cbe4d3c6f","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/v9wsgj","slide":1,"title":"SIAM SILADIN","textShapes":8}
+{"kind":"textbox","id":"sh/07q1onud","slide":1,"text":"SIAM SILADIN","textPreview":"SIAM SILADIN","textChars":12,"textLines":1,"bbox":[64,29,400,24]}
+{"kind":"textbox","id":"sh/f6h0vids","slide":1,"text":"01 / 05","textPreview":"01 / 05","textChars":7,"textLines":1,"bbox":[1110,29,106,24]}
+{"kind":"shape","id":"sh/e58jmdc7","slide":1,"bbox":[64,66,1152,1]}
+{"kind":"shape","id":"sh/d4fit8v2","slide":1,"bbox":[734,67,546,653]}
+{"kind":"textbox","id":"sh/s361k3uh","slide":1,"text":"สยามศิลาดิน","textPreview":"สยามศิลาดิน","textChars":11,"textLines":1,"bbox":[63,124,680,115]}
+{"kind":"textbox","id":"sh/r2x0rydw","slide":1,"text":"ธุรกิจเครื่องปั้นดินเผาที่สืบสานศิลปะ\nและวัฒนธรรมไทย","textPreview":"ธุรกิจเครื่องปั้นดินเผาที่สืบสานศิลปะ | และวัฒนธรรมไทย","textChars":52,"textLines":2,"bbox":[68,255,600,85]}
+{"kind":"shape","id":"sh/qhojitcb","slide":1,"bbox":[68,379,48,2]}
+{"kind":"textbox","id":"sh/x0j2psv6","slide":1,"text":"“ปั้นดินให้มีคุณค่า\nเพราะงานศิลป์ไทยควรอยู่คู่คนไทย”","textPreview":"“ปั้นดินให้มีคุณค่า | เพราะงานศิลป์ไทยควรอยู่คู่คนไทย”","textChars":52,"textLines":2,"bbox":[68,405,610,90]}
+{"kind":"textbox","id":"sh/cza1w7ul","slide":1,"text":"สมาชิก","textPreview":"สมาชิก","textChars":6,"textLines":1,"bbox":[68,535,150,30]}
+{"kind":"textbox","id":"sh/q1sjedkz","slide":1,"text":"นาย นราวิชญ์ ทิดมนตรี  ชั้น 2/7  เลขที่ 14\nนาย คณธัช หุ่นเมืองปัก  ชั้น 2/7  เลขที่ 15\nนาย นวพรรต ลีนะกิตติ  ชั้น 2/7  เลขที่ 20\nนาย ชลพล ศรีชาเยช  ชั้น 2/7  เลขที่ 21","textPreview":"นาย นราวิชญ์ ทิดมนตรี  ชั้น 2/7  เลขที่ 14 | นาย คณธัช หุ่นเมืองปัก  ชั้น 2/7  เลขที่ 15 | นาย นวพรรต ลีนะกิตติ  ชั้น 2/7  เลขที่ 20 | นา...","textChars":167,"textLines":4,"bbox":[68,578,605,115]}
+{"kind":"shape","id":"sh/b2lkni1k","slide":1,"bbox":[780,127,452,506]}
+{"kind":"textbox","id":"sh/c3u1gn25","slide":1,"text":"พื้นที่สำหรับรูปหน้าปก","textPreview":"พื้นที่สำหรับรูปหน้าปก","textChars":22,"textLines":1,"bbox":[802,362,408,36]}
+{"kind":"notes","id":"nt/v9wsgj","slide":1,"text":""}
+{"kind":"slide","id":"sl/1ef46r","slide":2,"title":"SIAM SILADIN","textShapes":14}
+{"kind":"textbox","id":"sh/atcb61wn","slide":2,"text":"SIAM SILADIN","textPreview":"SIAM SILADIN","textChars":12,"textLines":1,"bbox":[64,29,400,24]}
+{"kind":"textbox","id":"sh/xw3u1gfy","slide":2,"text":"02 / 05","textPreview":"02 / 05","textChars":7,"textLines":1,"bbox":[1110,29,106,24]}
+{"kind":"shape","id":"sh/wvut8bed","slide":2,"bbox":[64,66,1152,1]}
+{"kind":"textbox","id":"sh/jy5c3qx4","slide":2,"text":"แนวคิดและที่มาของธุรกิจ","textPreview":"แนวคิดและที่มาของธุรกิจ","textChars":23,"textLines":1,"bbox":[64,92,1150,66]}
+{"kind":"textbox","id":"sh/ixcbalwj","slide":2,"text":"แรงบันดาลใจ","textPreview":"แรงบันดาลใจ","textChars":11,"textLines":1,"bbox":[64,208,470,42]}
+{"kind":"textbox","id":"sh/50nu50va","slide":2,"text":"ศิลปะจากดิน\nที่อยู่คู่ชีวิตไทย","textPreview":"ศิลปะจากดิน | ที่อยู่คู่ชีวิตไทย","textChars":30,"textLines":2,"bbox":[60,270,590,155]}
+{"kind":"textbox","id":"sh/kzetcvep","slide":2,"text":"พวกเราชื่นชอบศิลปะและวัฒนธรรมไทย โดยเฉพาะ\nเครื่องปั้นดินเผาที่สวยงาม เรียบง่าย และสะท้อน\nภูมิปัญญาท้องถิ่น จึงต้องการพัฒนางานหัตถกรรมไทย\nให้เข้ากับความสนใจของผู้บริโภคยุคใหม่","textPreview":"พวกเราชื่นชอบศิลปะและวัฒนธรรมไทย โดยเฉพาะ | เครื่องปั้นดินเผาที่สวยงาม เรียบง่าย และสะท้อน | ภูมิปัญญาท้องถิ่น จึงต้องการพัฒนางานหัตถกรรม...","textChars":174,"textLines":4,"bbox":[64,451,594,166]}
+{"kind":"shape","id":"sh/725c7qd0","slide":2,"bbox":[693,205,1,413]}
+{"kind":"textbox","id":"sh/61wbelwf","slide":2,"text":"ความหมายของชื่อ “สยามศิลาดิน”","textPreview":"ความหมายของชื่อ “สยามศิลาดิน”","textChars":29,"textLines":1,"bbox":[741,207,475,43]}
+{"kind":"textbox","id":"sh/4rmdcrq9","slide":2,"text":"สยาม","textPreview":"สยาม","textChars":4,"textLines":1,"bbox":[741,278,170,43]}
+{"kind":"textbox","id":"sh/5svelw7u","slide":2,"text":"สื่อถึงความเป็นไทย","textPreview":"สื่อถึงความเป็นไทย","textChars":18,"textLines":1,"bbox":[741,326,475,36]}
+{"kind":"textbox","id":"sh/ipkvah83","slide":2,"text":"ศิลาและดิน","textPreview":"ศิลาและดิน","textChars":10,"textLines":1,"bbox":[741,384,400,43]}
+{"kind":"textbox","id":"sh/3qtwjmpo","slide":2,"text":"สื่อถึงวัสดุธรรมชาติและงานฝีมือ","textPreview":"สื่อถึงวัสดุธรรมชาติและงานฝีมือ","textChars":31,"textLines":1,"bbox":[741,432,475,36]}
+{"kind":"textbox","id":"sh/sfmdgrql","slide":2,"text":"แนวคิดของธุรกิจ","textPreview":"แนวคิดของธุรกิจ","textChars":15,"textLines":1,"bbox":[741,497,475,36]}
+{"kind":"textbox","id":"sh/dgvepw7q","slide":2,"text":"จำหน่ายเครื่องปั้นดินเผา ควบคู่ชุดระบายสี\nและคอร์สปั้นดิน ลูกค้าจึงได้ทั้งสินค้า ความรู้\nและความสนุกจากการลงมือทำ","textPreview":"จำหน่ายเครื่องปั้นดินเผา ควบคู่ชุดระบายสี | และคอร์สปั้นดิน ลูกค้าจึงได้ทั้งสินค้า ความรู้ | และความสนุกจากการลงมือทำ","textChars":113,"textLines":3,"bbox":[741,543,475,105]}
+{"kind":"shape","id":"sh/qt4ve18f","slide":2,"bbox":[64,656,1152,1]}
+{"kind":"textbox","id":"sh/redwnmp0","slide":2,"text":"เป้าหมายของแบรนด์คือทำให้งานศิลป์จากดินเข้าถึงง่ายและอยู่ร่วมกับชีวิตประจำวัน","textPreview":"เป้าหมายของแบรนด์คือทำให้งานศิลป์จากดินเข้าถึงง่ายและอยู่ร่วมกับชีวิตประจำวัน","textChars":77,"textLines":1,"bbox":[64,672,1152,31]}
+{"kind":"notes","id":"nt/1ef46r","slide":2,"text":""}
+{"kind":"slide","id":"sl/mccvw4","slide":3,"title":"SIAM SILADIN","textShapes":18}
+{"kind":"textbox","id":"sh/0zu1cjq9","slide":3,"text":"SIAM SILADIN","textPreview":"SIAM SILADIN","textChars":12,"textLines":1,"bbox":[64,29,400,24]}
+{"kind":"textbox","id":"sh/zylk3epo","slide":3,"text":"03 / 05","textPreview":"03 / 05","textChars":7,"textLines":1,"bbox":[1110,29,106,24]}
+{"kind":"shape","id":"sh/excja983","slide":3,"bbox":[64,66,1152,1]}
+{"kind":"textbox","id":"sh/dw321o7i","slide":3,"text":"กลุ่มเป้าหมายและช่องทางจัดจำหน่าย","textPreview":"กลุ่มเป้าหมายและช่องทางจัดจำหน่าย","textChars":33,"textLines":1,"bbox":[64,92,1150,66]}
+{"kind":"textbox","id":"sh/cvu18jqd","slide":3,"text":"กลุ่มเป้าหมายหลัก","textPreview":"กลุ่มเป้าหมายหลัก","textChars":17,"textLines":1,"bbox":[64,200,565,40]}
+{"kind":"textbox","id":"sh/rulkzeps","slide":3,"text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[64,264,60,39]}
+{"kind":"textbox","id":"sh/qtsj6987","slide":3,"text":"ผู้ที่สนใจศิลปะและวัฒนธรรมไทย","textPreview":"ผู้ที่สนใจศิลปะและวัฒนธรรมไทย","textChars":29,"textLines":1,"bbox":[145,264,480,65]}
+{"kind":"textbox","id":"sh/psj2x47m","slide":3,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[64,342,60,39]}
+{"kind":"textbox","id":"sh/4ra14zq1","slide":3,"text":"นักเรียน นักศึกษา และครอบครัว\nที่มองหากิจกรรมสร้างสรรค์","textPreview":"นักเรียน นักศึกษา และครอบครัว | ที่มองหากิจกรรมสร้างสรรค์","textChars":55,"textLines":2,"bbox":[145,342,480,65]}
+{"kind":"textbox","id":"sh/65kbutkf","slide":3,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[64,420,60,39]}
+{"kind":"textbox","id":"sh/76dc3e10","slide":3,"text":"นักท่องเที่ยวที่ต้องการของฝาก\nที่มีเอกลักษณ์ไทย","textPreview":"นักท่องเที่ยวที่ต้องการของฝาก | ที่มีเอกลักษณ์ไทย","textChars":47,"textLines":2,"bbox":[145,420,480,65]}
+{"kind":"textbox","id":"sh/87mtwji5","slide":3,"text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[64,498,60,39]}
+{"kind":"textbox","id":"sh/t8vu5ojq","slide":3,"text":"ผู้ที่ต้องการของตกแต่งบ้าน\nหรือของขวัญทำมือ","textPreview":"ผู้ที่ต้องการของตกแต่งบ้าน | หรือของขวัญทำมือ","textChars":43,"textLines":2,"bbox":[145,498,480,65]}
+{"kind":"shape","id":"sh/yhkbq9k3","slide":3,"bbox":[695,199,521,398]}
+{"kind":"textbox","id":"sh/jitcze1o","slide":3,"text":"ช่องทางจัดจำหน่าย","textPreview":"ช่องทางจัดจำหน่าย","textChars":17,"textLines":1,"bbox":[728,226,450,45]}
+{"kind":"textbox","id":"sh/kj2tsj29","slide":3,"text":"หน้าร้าน","textPreview":"หน้าร้าน","textChars":8,"textLines":1,"bbox":[728,297,430,36]}
+{"kind":"textbox","id":"sh/lkbu1oju","slide":3,"text":"ร้านสยามศิลาดิน ตลาดงานฝีมือ\nและบูธตามเทศกาลหรือแหล่งท่องเที่ยว\nเชิงวัฒนธรรม","textPreview":"ร้านสยามศิลาดิน ตลาดงานฝีมือ | และบูธตามเทศกาลหรือแหล่งท่องเที่ยว | เชิงวัฒนธรรม","textChars":76,"textLines":3,"bbox":[728,342,445,99]}
+{"kind":"textbox","id":"sh/ad0bm9k7","slide":3,"text":"ออนไลน์","textPreview":"ออนไลน์","textChars":7,"textLines":1,"bbox":[728,464,430,34]}
+{"kind":"textbox","id":"sh/be9svu1s","slide":3,"text":"Facebook, Instagram, TikTok\nLINE Official Account, Shopee, Lazada","textPreview":"Facebook, Instagram, TikTok | LINE Official Account, Shopee, Lazada","textChars":65,"textLines":2,"bbox":[728,511,450,65]}
+{"kind":"shape","id":"sh/f65076d8","slide":3,"bbox":[64,625,1152,1]}
+{"kind":"textbox","id":"sh/e5wze1wn","slide":3,"text":"เครื่องปั้นดินเผาเป็นทั้งของใช้ ของตกแต่ง และผลงานศิลปะ ลูกค้าจึงเลือกซื้อเพื่อใช้งาน สะสม\nมอบเป็นของขวัญ หรือเรียนรู้การปั้นด้วยตนเองได้","textPreview":"เครื่องปั้นดินเผาเป็นทั้งของใช้ ของตกแต่ง และผลงานศิลปะ ลูกค้าจึงเลือกซื้อเพื่อใช้งาน สะสม | มอบเป็นของขวัญ หรือเรียนรู้การปั้นด้วยตนเองได้","textChars":137,"textLines":2,"bbox":[64,646,1152,64]}
+{"kind":"notes","id":"nt/mccvw4","slide":3,"text":""}
+{"kind":"slide","id":"sl/by00a4","slide":4,"title":"SIAM SILADIN","textShapes":13}
+{"kind":"textbox","id":"sh/ih0ry5cf","slide":4,"text":"SIAM SILADIN","textPreview":"SIAM SILADIN","textChars":12,"textLines":1,"bbox":[64,29,400,24]}
+{"kind":"textbox","id":"sh/5kbatkb6","slide":4,"text":"04 / 05","textPreview":"04 / 05","textChars":7,"textLines":1,"bbox":[1110,29,106,24]}
+{"kind":"shape","id":"sh/4ji90ful","slide":4,"bbox":[64,66,1152,1]}
+{"kind":"textbox","id":"sh/rmtsvutw","slide":4,"text":"สินค้าและบริการ","textPreview":"สินค้าและบริการ","textChars":15,"textLines":1,"bbox":[64,92,1150,66]}
+{"kind":"textbox","id":"sh/6lkr2pcr","slide":4,"text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[64,190,210,100]}
+{"kind":"textbox","id":"sh/t8baxkb2","slide":4,"text":"เครื่องใช้และของตกแต่ง","textPreview":"เครื่องใช้และของตกแต่ง","textChars":22,"textLines":1,"bbox":[64,306,366,44]}
+{"kind":"shape","id":"sh/s7294zuh","slide":4,"bbox":[64,372,340,1]}
+{"kind":"textbox","id":"sh/nqp8zqts","slide":4,"text":"ถ้วย จาน และหม้อ\n\nแจกันและของตกแต่งบ้าน\n\nกำไลข้อมือจากดินเผา","textPreview":"ถ้วย จาน และหม้อ |  | แจกันและของตกแต่งบ้าน |  | กำไลข้อมือจากดินเผา","textChars":60,"textLines":5,"bbox":[64,397,365,214]}
+{"kind":"textbox","id":"sh/mpgrqlc7","slide":4,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[460,190,210,100]}
+{"kind":"textbox","id":"sh/kja9kju9","slide":4,"text":"กิจกรรมสร้างสรรค์","textPreview":"กิจกรรมสร้างสรรค์","textChars":17,"textLines":1,"bbox":[460,306,366,44]}
+{"kind":"shape","id":"sh/5kjat4bu","slide":4,"bbox":[460,372,340,1]}
+{"kind":"textbox","id":"sh/ih8ri9cj","slide":4,"text":"ของเล่นจากดินเผา\n\nชุดเครื่องปั้นดินเผา\nสำหรับระบายสี\n\nอุปกรณ์ขึ้นรูปและตกแต่ง","textPreview":"ของเล่นจากดินเผา |  | ชุดเครื่องปั้นดินเผา | สำหรับระบายสี |  | อุปกรณ์ขึ้นรูปและตกแต่ง","textChars":77,"textLines":6,"bbox":[460,397,365,214]}
+{"kind":"textbox","id":"sh/jihsreto","slide":4,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[856,190,210,100]}
+{"kind":"textbox","id":"sh/snatojul","slide":4,"text":"คอร์สและประสบการณ์","textPreview":"คอร์สและประสบการณ์","textChars":18,"textLines":1,"bbox":[856,306,366,44]}
+{"kind":"shape","id":"sh/tojaxob6","slide":4,"bbox":[856,372,340,1]}
+{"kind":"textbox","id":"sh/6lsbm9cf","slide":4,"text":"คอร์สปั้นดินสำหรับผู้เริ่มต้น\n\nกิจกรรมสำหรับคู่รัก ครอบครัว\nและกลุ่มเพื่อน\n\nกิจกรรมสำหรับโรงเรียน\nและองค์กร","textPreview":"คอร์สปั้นดินสำหรับผู้เริ่มต้น |  | กิจกรรมสำหรับคู่รัก ครอบครัว | และกลุ่มเพื่อน |  | กิจกรรมสำหรับโรงเรียน | และองค์กร","textChars":107,"textLines":7,"bbox":[856,397,365,214]}
+{"kind":"shape","id":"sh/7m1svet0","slide":4,"bbox":[64,631,1152,1]}
+{"kind":"textbox","id":"sh/8r69cfu1","slide":4,"text":"จุดเด่นของร้าน: ลูกค้าสามารถซื้อสินค้าสำเร็จรูป ออกแบบผลงานของตนเอง\nหรือเรียนรู้กระบวนการปั้นดินได้ภายในร้านเดียว","textPreview":"จุดเด่นของร้าน: ลูกค้าสามารถซื้อสินค้าสำเร็จรูป ออกแบบผลงานของตนเอง | หรือเรียนรู้กระบวนการปั้นดินได้ภายในร้านเดียว","textChars":113,"textLines":2,"bbox":[64,652,1152,62]}
+{"kind":"notes","id":"nt/by00a4","slide":4,"text":""}
+{"kind":"slide","id":"sl/b1euzq","slide":5,"title":"SIAM SILADIN","textShapes":14}
+{"kind":"textbox","id":"sh/orup0bqt","slide":5,"text":"SIAM SILADIN","textPreview":"SIAM SILADIN","textChars":12,"textLines":1,"bbox":[64,29,400,24]}
+{"kind":"textbox","id":"sh/nql876p8","slide":5,"text":"05 / 05","textPreview":"05 / 05","textChars":7,"textLines":1,"bbox":[1110,29,106,24]}
+{"kind":"shape","id":"sh/mpc7y18n","slide":5,"bbox":[64,66,1152,1]}
+{"kind":"textbox","id":"sh/1o3q5wr2","slide":5,"text":"สยามศิลาดิน","textPreview":"สยามศิลาดิน","textChars":11,"textLines":1,"bbox":[64,99,1152,70]}
+{"kind":"textbox","id":"sh/0nupwrqx","slide":5,"text":"ทุกชิ้นมีเรื่องราว\nทุกการปั้นช่วยสืบสานงานศิลป์ไทย","textPreview":"ทุกชิ้นมีเรื่องราว | ทุกการปั้นช่วยสืบสานงานศิลป์ไทย","textChars":50,"textLines":2,"bbox":[804,108,412,60]}
+{"kind":"textbox","id":"sh/zmlo3m9c","slide":5,"text":"Facebook, TikTok, LINE, QR Code","textPreview":"Facebook, TikTok, LINE, QR Code","textChars":31,"textLines":1,"bbox":[804,182,412,30]}
+{"kind":"textbox","id":"sh/els7u18r","slide":5,"text":"“ปั้นดินให้มีคุณค่า เพราะงานศิลป์ไทยควรอยู่คู่คนไทย”","textPreview":"“ปั้นดินให้มีคุณค่า เพราะงานศิลป์ไทยควรอยู่คู่คนไทย”","textChars":52,"textLines":1,"bbox":[67,176,1140,44]}
+{"kind":"textbox","id":"sh/lknqh07m","slide":5,"text":"สัมผัสเสน่ห์\nเครื่องปั้นดินเผาไทย","textPreview":"สัมผัสเสน่ห์ | เครื่องปั้นดินเผาไทย","textChars":33,"textLines":2,"bbox":[64,262,500,105]}
+{"kind":"textbox","id":"sh/kjep8vq1","slide":5,"text":"เลือกซื้อของใช้ ของตกแต่ง และสนุกกับ\nกิจกรรมระบายสีหรือปั้นดินด้วยตนเอง","textPreview":"เลือกซื้อของใช้ ของตกแต่ง และสนุกกับ | กิจกรรมระบายสีหรือปั้นดินด้วยตนเอง","textChars":71,"textLines":2,"bbox":[67,387,490,73]}
+{"kind":"textbox","id":"sh/2ls7qpoj","slide":5,"text":"โปรโมชั่นพิเศษ","textPreview":"โปรโมชั่นพิเศษ","textChars":14,"textLines":1,"bbox":[67,491,420,35]}
+{"kind":"textbox","id":"sh/3mloju54","slide":5,"text":"100","textPreview":"100","textChars":3,"textLines":1,"bbox":[58,527,255,115]}
+{"kind":"textbox","id":"sh/4nupsz6p","slide":5,"text":"บาท","textPreview":"บาท","textChars":3,"textLines":1,"bbox":[299,579,180,52]}
+{"kind":"textbox","id":"sh/p836l4na","slide":5,"text":"ซื้อครบ รับส่วนลดสินค้าชิ้นถัดไป 20 บาท","textPreview":"ซื้อครบ รับส่วนลดสินค้าชิ้นถัดไป 20 บาท","textChars":39,"textLines":1,"bbox":[67,646,502,38]}
+{"kind":"shape","id":"sh/uhs7mpon","slide":5,"bbox":[576,242,640,360]}
+{"kind":"textbox","id":"sh/fi1ofap8","slide":5,"text":"พื้นที่สำหรับรูปโปสเตอร์สินค้า 16:9","textPreview":"พื้นที่สำหรับรูปโปสเตอร์สินค้า 16:9","textChars":35,"textLines":1,"bbox":[598,404,596,36]}
+{"kind":"textbox","id":"sh/gjapof6t","slide":5,"text":"ซื้อชุดระบายสี 2 ชุดขึ้นไป\nรับส่วนลดคอร์สปั้นดิน 100 บาท","textPreview":"ซื้อชุดระบายสี 2 ชุดขึ้นไป | รับส่วนลดคอร์สปั้นดิน 100 บาท","textChars":56,"textLines":2,"bbox":[595,625,621,67]}
+{"kind":"notes","id":"nt/b1euzq","slide":5,"text":"ข้อความปิดท้ายสำหรับโปสเตอร์: ทุกชิ้นมีเรื่องราว ทุกการปั้นช่วยสืบสานงานศิลป์ไทย\nช่องทางติดต่อสำหรับเติมเมื่อพร้อม: Facebook, TikTok, LINE และ QR Code"}

@@ -17,6 +17,16 @@ using OpenTelemetry.Trace;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
+var externalSecretsFile = builder.Configuration["DEVPULSE_SECRETS_FILE"];
+if (!string.IsNullOrWhiteSpace(externalSecretsFile))
+{
+    var externalSecretsPath = Path.GetFullPath(externalSecretsFile);
+    if (!File.Exists(externalSecretsPath))
+        throw new InvalidOperationException("The configured DevPulse secrets file could not be found.");
+
+    // This file must be mounted at runtime and kept outside the repository and image.
+    builder.Configuration.AddJsonFile(externalSecretsPath, optional: false, reloadOnChange: false);
+}
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
@@ -32,6 +42,8 @@ builder.Services.AddRateLimiter(options =>
     { limiter.PermitLimit = 5; limiter.Window = TimeSpan.FromMinutes(1); limiter.QueueLimit = 0; });
     options.AddConcurrencyLimiter("admin-actions", limiter =>
     { limiter.PermitLimit = 2; limiter.QueueLimit = 0; });
+    options.AddFixedWindowLimiter("spotify-token", limiter =>
+    { limiter.PermitLimit = 30; limiter.Window = TimeSpan.FromMinutes(1); limiter.QueueLimit = 0; });
 });
 var spotify = new SpotifySettings(builder.Configuration["Spotify:ClientId"] ?? "",
     builder.Configuration["Spotify:ClientSecret"] ?? "");
@@ -117,9 +129,11 @@ if (spotify.IsConfigured)
         options.UserInformationEndpoint = "https://api.spotify.com/v1/me";
         options.UsePkce = true;
         options.Scope.Add("user-read-private");
+        options.Scope.Add("user-read-email");
         options.Scope.Add("user-read-playback-state");
         options.Scope.Add("user-read-currently-playing");
         options.Scope.Add("user-modify-playback-state");
+        options.Scope.Add("streaming");
         options.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "id");
         options.ClaimActions.MapJsonKey(ClaimTypes.Name, "display_name");
         options.Events.OnCreatingTicket = async context =>
@@ -199,6 +213,17 @@ app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 app.MapGet("/spotify/login", () => spotify.IsConfigured
     ? Results.Challenge(new AuthenticationProperties { RedirectUri = "/spotify" }, ["Spotify"])
     : Results.Redirect("/spotify?error=configuration"));
+app.MapGet("/spotify/browser-token", async (HttpContext context, SpotifyPlayerService player) =>
+{
+    context.Response.Headers.CacheControl = "no-store, private";
+    context.Response.Headers.Pragma = "no-cache";
+    context.Response.Headers.Vary = "Cookie";
+    context.Response.Headers.XContentTypeOptions = "nosniff";
+    var token = await player.GetBrowserTokenAsync(context.User, context.RequestAborted);
+    return token.Success
+        ? Results.Json(new { accessToken = token.AccessToken, expiresIn = token.ExpiresInSeconds })
+        : Results.Json(new { error = token.Error }, statusCode: token.Status);
+}).RequireRateLimiting("spotify-token");
 app.MapPost("/spotify/logout", async (HttpContext context, IAntiforgery antiforgery, SpotifySessionStore store) =>
 {
     try { await antiforgery.ValidateRequestAsync(context); }

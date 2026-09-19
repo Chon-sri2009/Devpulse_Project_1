@@ -1,6 +1,6 @@
 # DevPulse
 
-A .NET 9 Blazor Server dashboard with host diagnostics and a Spotify remote player.
+A .NET 9 Blazor Server dashboard with host diagnostics and a Spotify Connect/browser player.
 
 ## Run locally
 
@@ -23,7 +23,7 @@ Diagnostics describe the machine running DevPulse. A hosted deployment reports i
 - **Inspectors:** collapsible JSON explorer, SHA-256 file hashing, local JWT decoding, and a bounded HTTP load tester.
 - **Administration:** separate administrator cookie, process listing/termination, maintenance mode, audit history, and redacted diagnostics ZIP export.
 - **Alerts:** memory, disk, and request-latency thresholds with in-app incidents plus optional HTTPS webhook and SMTP delivery.
-- **Spotify:** protected OAuth/PKCE sessions, track/episode metadata, artwork, progress, devices, volume, playback controls, refresh, and rate-limit handling.
+- **Spotify:** protected OAuth/PKCE sessions, Web Playback SDK browser audio, live progress, track/episode metadata, artwork, devices, seek/volume/playback controls, and rate-limit handling.
 - Health endpoint, diagnostics production gate, friendly error/404 pages, persistent encrypted sessions, CI, and production smoke tests.
 
 ## Spotify setup
@@ -41,9 +41,9 @@ dotnet user-secrets set "Spotify:ClientId" "YOUR_CLIENT_ID"
 dotnet user-secrets set "Spotify:ClientSecret" "YOUR_CLIENT_SECRET"
 ```
 
-Restart, open /spotify, connect, then open Spotify on a device and start a track. Playback controls require Spotify Premium and a compatible device. Development-mode apps may require allowed users in the developer dashboard; consult Spotify's current restrictions. Some devices do not support volume control.
+Restart, open /spotify, and connect. Playback controls and browser audio require Spotify Premium. Development-mode apps may require allowed users in the developer dashboard; consult Spotify's current restrictions. Some external devices do not support volume control.
 
-This is a remote controller for an existing Spotify client. Audio plays on that device. The page refreshes every 10 seconds and offers manual refresh; commands can take a moment to appear.
+The page can control existing Spotify Connect devices or create a `DevPulse Web Player` that plays audio in the browser. Select **Play in this browser** to activate and transfer playback. Browser playback uses SDK state events; the progress display updates locally every second and reconciles with Spotify every four seconds while the tab is visible. External-device changes are near-real-time because Spotify does not provide playback webhooks. Existing users must disconnect and reconnect once after this upgrade to grant the new `streaming` and `user-read-email` scopes.
 
 Tokens are encrypted on the server; the cookie contains only an opaque session ID. Sessions last at most seven days. Disconnect invalidates the app session, including other open tabs. To revoke the OAuth grant completely, remove DevPulse from Spotify account Apps settings.
 
@@ -109,6 +109,8 @@ docker run --rm -p 10000:10000 -v devpulse-data:/app/data devpulse
 
 Use the repository Dockerfile, port 10000 and health check /healthz on Render. The image runs as the non-root app user. The platform terminates HTTPS. Configure its trusted proxy addresses/networks so OAuth receives the correct HTTPS scheme; do not trust every network indiscriminately. Register the public HTTPS callback in Spotify.
 
+For file-based production secrets on Render, create a Secret File named `devpulse-secrets.json`, set `DEVPULSE_SECRETS_FILE=/etc/secrets/devpulse-secrets.json`, and keep that file out of the repository and Docker image. The container user belongs to Render's secret-file group.
+
 Mount persistent storage at /app/data, writable by the container's app user. It holds both keys and encrypted tokens. Protect filesystem access and backups: access to both keys and tokens permits decryption. On Windows, optionally enable DPAPI protection only when the deployment identity has a persistent profile. Without persistent storage, users must reconnect after container replacement.
 
 Use one instance with the file-backed session store. Multiple replicas require shared session storage and distributed refresh locking.
@@ -123,20 +125,20 @@ dotnet publish MiniProject_Everything_1.csproj -c Release -o artifacts/publish
 pwsh -File scripts/Smoke-Test.ps1
 ```
 
-The regression executable exits nonzero on failure and uses no extra test-framework packages. Spotify responses are simulated, fixture data is temporary and no Spotify account is used. The HTTP smoke script runs its own loopback production process with dummy credentials and checks routes, the diagnostics gate, 404s, OAuth/PKCE, trusted forwarding and logout antiforgery.
+The regression executable exits nonzero on failure and uses no extra test-framework packages. Spotify responses are simulated, fixture data is temporary and no Spotify account is used. The HTTP smoke script runs its own loopback production process with dummy credentials and checks routes, static browser-player assets, the diagnostics gate, 404s, OAuth/PKCE and browser scopes, the protected token endpoint, trusted forwarding, and logout antiforgery.
 
 GitHub Actions runs build, regression checks, formatting, smoke checks and publish on Windows and Linux after push.
 
 ## Owner review for live deployment
 
-1. Set Spotify credentials, redirect URIs and allowed users in your developer account.
+1. Set Spotify credentials, redirect URIs and allowed users in your developer account; enable Web API and Web Playback SDK use.
 2. Choose persistent hosting storage and ensure the non-root app user can write it.
 3. Configure trusted proxy addresses and the public hostname.
 4. Decide whether diagnostics should be exposed and choose a scan root.
 5. Configure a unique administrator password and test privileged actions behind HTTPS; enable process termination only if you explicitly need it.
 6. Review every operations allowlist, log path, database target, and alert destination.
 7. Optionally configure an OTLP collector and SMTP/webhook alerts.
-8. Test real Spotify login/playback using a Premium account and active device.
+8. Test real Spotify login, external-device control, and **Play in this browser** using a Premium account.
 
 ## References
 

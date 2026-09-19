@@ -7,6 +7,15 @@
 .spotify-card > div { flex:1; min-width:180px; }
 .spotify-card h2 { font-size:1.25rem; }
 .spotify-mark { width:56px; height:56px; display:grid; place-items:center; border-radius:16px; background:#16883e; color:white; font-size:2rem; }
+.browser-player-card { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:18px; padding:22px 26px; color:#eafbf0; background:linear-gradient(135deg,#12261a,#173d26); border:1px solid #28643c; border-radius:18px; box-shadow:0 16px 36px rgba(16,52,29,.16); }
+.browser-player-copy { display:flex; align-items:center; gap:16px; flex:1; min-width:240px; }
+.browser-player-copy h2 { margin:.15rem 0; font-size:1.25rem; }
+.browser-player-copy p { margin:0; color:#bcd8c5; }
+.browser-player-copy .connection-label { color:#54d985; }
+.status-dot { width:13px; height:13px; flex:0 0 13px; border-radius:50%; background:#54d985; box-shadow:0 0 0 5px rgba(84,217,133,.14),0 0 16px rgba(84,217,133,.5); }
+.status-dot.connecting { background:#f0b84b; box-shadow:0 0 0 5px rgba(240,184,75,.14); animation:pulse 1.5s ease-in-out infinite; }
+.browser-error { flex-basis:100%; margin:0; padding:10px 12px; color:#ffd8d8; background:rgba(150,25,25,.28); border-radius:8px; }
+@keyframes pulse { 50% { opacity:.45; transform:scale(.85); } }
 .spotify-actions { display:flex; flex-wrap:wrap; gap:10px; margin:20px 0; }
 .spotify-button { display:inline-flex; align-items:center; justify-content:center; min-height:42px; border:0; padding:8px 16px; border-radius:9px; font-size:.9rem; font-weight:700; text-decoration:none; }
 .connect-button { background:#167343; color:#fff; }
@@ -19,7 +28,8 @@ button:disabled { opacity:.5; cursor:not-allowed; }
 .now-playing h2 { font-size:1.6rem; overflow-wrap:anywhere; }
 .device-controls { display:grid; grid-template-columns:minmax(140px,1fr) minmax(120px,2fr) auto; align-items:center; gap:16px; border-top:1px solid #e1e7f0; padding-top:24px; }
 .device-controls p { grid-column:1/-1; color:#62718a; }
-progress { width:100%; height:8px; margin-top:20px; accent-color:#16883e; }
+.track-progress { width:100%; margin-top:20px; accent-color:#16883e; cursor:pointer; }
+.track-progress:disabled { cursor:not-allowed; }
 .progress-label,.refresh-note { font-size:.8rem; margin:12px 0 0; }
 .error-message { color:#a92323; padding:14px; background:#fff0f0; border-radius:8px; }
 @media(max-width:800px) { .device-controls { grid-template-columns:1fr; } .now-playing { align-items:flex-start; flex-direction:column; } .player-panel { padding:20px; } }

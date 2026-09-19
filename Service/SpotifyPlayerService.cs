@@ -12,6 +12,12 @@ public sealed record SpotifyReply(int Status, JsonElement? Data = null, string? 
     public bool NeedsLogin => Status == 401;
 }
 
+public sealed record SpotifyBrowserTokenReply(int Status, string? AccessToken = null,
+    int ExpiresInSeconds = 0, string? Error = null)
+{
+    public bool Success => Status is >= 200 and < 300 && !string.IsNullOrEmpty(AccessToken);
+}
+
 public sealed class SpotifyPlayerService(IHttpClientFactory clients, SpotifySettings settings,
     SpotifySessionStore sessions, ILogger<SpotifyPlayerService> logger)
 {
@@ -20,6 +26,36 @@ public sealed class SpotifyPlayerService(IHttpClientFactory clients, SpotifySett
         SendAsync(user, HttpMethod.Get, "me/player?additional_types=track,episode", null, ct);
     public Task<SpotifyReply> GetDevicesAsync(ClaimsPrincipal user, CancellationToken ct) =>
         SendAsync(user, HttpMethod.Get, "me/player/devices", null, ct);
+
+    public async Task<SpotifyBrowserTokenReply> GetBrowserTokenAsync(ClaimsPrincipal user, CancellationToken ct)
+    {
+        if (!settings.IsConfigured) return new(503, Error: "Spotify is not configured.");
+        try
+        {
+            return await sessions.UseAsync(user, async (session, token) =>
+            {
+                if (session is null) return (null, BrowserLoginRequired());
+                if (session.ExpiresAt <= DateTimeOffset.UtcNow.AddMinutes(1))
+                {
+                    var refresh = await RefreshAsync(session, token);
+                    if (refresh.Error is not null)
+                        return (refresh.Session, new SpotifyBrowserTokenReply(refresh.Error.Status,
+                            Error: refresh.Error.Error));
+                    session = refresh.Session!;
+                }
+
+                var expiresIn = Math.Max(1, (int)Math.Floor((session.ExpiresAt - DateTimeOffset.UtcNow).TotalSeconds));
+                return (session, new SpotifyBrowserTokenReply(200, session.AccessToken, expiresIn));
+            }, ct);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        { return new(504, Error: "Spotify took too long to respond. Try again."); }
+        catch (Exception ex) when (ex is HttpRequestException or JsonException or IOException or UnauthorizedAccessException)
+        {
+            logger.LogWarning("Spotify browser token request failed: {ExceptionType}", ex.GetType().Name);
+            return new(503, Error: "Spotify is temporarily unavailable. Try again.");
+        }
+    }
 
     public Task<SpotifyReply> CommandAsync(ClaimsPrincipal user, string command, string? deviceId,
         int? value, CancellationToken ct)
@@ -32,8 +68,11 @@ public sealed class SpotifyPlayerService(IHttpClientFactory clients, SpotifySett
             "next" or "previous" => SendAsync(user, HttpMethod.Post, "me/player/" + command + suffix, null, ct),
             "volume" when value is >= 0 and <= 100 => SendAsync(user, HttpMethod.Put,
                 "me/player/volume?volume_percent=" + value + (device.Length > 0 ? "&" + device : ""), null, ct),
-            "transfer" when !string.IsNullOrWhiteSpace(deviceId) => SendAsync(user, HttpMethod.Put, "me/player",
-                new { device_ids = new[] { deviceId }, play = false }, ct),
+            "seek" when value is >= 0 => SendAsync(user, HttpMethod.Put,
+                "me/player/seek?position_ms=" + value + (device.Length > 0 ? "&" + device : ""), null, ct),
+            "transfer" or "transfer-play" when !string.IsNullOrWhiteSpace(deviceId) =>
+                SendAsync(user, HttpMethod.Put, "me/player",
+                    new { device_ids = new[] { deviceId }, play = command == "transfer-play" }, ct),
             _ => Task.FromResult(new SpotifyReply(400, Error: "Choose a valid playback action or volume from 0 to 100."))
         };
     }
@@ -138,4 +177,6 @@ public sealed class SpotifyPlayerService(IHttpClientFactory clients, SpotifySett
         }, RetryAfterSeconds: seconds);
     }
     private static SpotifyReply LoginRequired() => new(401, Error: "Your Spotify session expired. Reconnect to continue.");
+    private static SpotifyBrowserTokenReply BrowserLoginRequired() =>
+        new(401, Error: "Your Spotify session expired. Reconnect to continue.");
 }

@@ -77,6 +77,7 @@ try {
     $homeResponse.Dispose()
     $assets = @([regex]::Matches($html, 'href="([^"]+\.css)"') | ForEach-Object { $_.Groups[1].Value })
     $assets += '_framework/blazor.web.js'
+    $assets += 'js/spotify-player.js'
     foreach ($asset in $assets) {
         $r = $client.GetAsync('/' + $asset.TrimStart('/')).GetAwaiter().GetResult()
         $bytes = $r.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult()
@@ -93,9 +94,14 @@ try {
     $location = [uri]::UnescapeDataString($r.Headers.Location.AbsoluteUri)
     if (!$location.Contains("redirect_uri=https://127.0.0.1:$port/signin-spotify")) { throw 'Trusted-proxy callback scheme failed.' }
     if (!$location.Contains('code_challenge=')) { throw 'OAuth PKCE missing.' }
+    if (!$location.Contains('streaming') -or !$location.Contains('user-read-email')) { throw 'Browser playback OAuth scopes missing.' }
     $r.Dispose()
     $request.Dispose()
     Write-Output 'PASS OAuth redirect and trusted proxy'
+    $r = $client.GetAsync('/spotify/browser-token').GetAwaiter().GetResult()
+    if ([int]$r.StatusCode -ne 401 -or $r.Headers.CacheControl.NoStore -ne $true) { throw 'Browser token endpoint did not reject an anonymous request safely.' }
+    $r.Dispose()
+    Write-Output 'PASS browser token endpoint rejects anonymous requests'
     $content = [System.Net.Http.StringContent]::new('')
     $r = $client.PostAsync('/spotify/logout', $content).GetAwaiter().GetResult()
     if ([int]$r.StatusCode -ne 400) { throw 'Logout accepted missing antiforgery token.' }

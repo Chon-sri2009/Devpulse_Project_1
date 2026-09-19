@@ -1,0 +1,149 @@
+{
+  "schemaVersion": "presentation-finalization.v1",
+  "finalSha256": "bcdc941a7bc46be6f8446e663bdcf16bdf52739f4269bb75cb04cdf06f3d9460",
+  "byteCount": 29544,
+  "packageIntegrity": {
+    "chart_count": 0,
+    "claim_boundary": "Structural package checks only; no slide text, notes, formulas, chart values, or native PowerPoint execution were inspected.",
+    "finding_count": 0,
+    "findings": [],
+    "notes_parts_skipped": 5,
+    "relationship_part_count": 15,
+    "slide_count": 5,
+    "status": "pass",
+    "exitCode": 0,
+    "findingCount": 0,
+    "warnings": []
+  },
+  "presentationLayout": {
+    "finding_count": 0,
+    "findings": [],
+    "font_policy": {
+      "checked_text_script_count": 108,
+      "native_font_rendering_verified": false,
+      "observed_font_families": [
+        "Georgia",
+        "Leelawadee"
+      ],
+      "observed_font_use_counts": {
+        "Georgia": 4,
+        "Leelawadee": 104
+      },
+      "passed": true,
+      "performed": true
+    },
+    "slide_count": 5,
+    "slide_size_in": [
+      13.3333,
+      7.5
+    ],
+    "warning_count": 1,
+    "warnings": [
+      {
+        "kind": "substantial_text_frame_overlap",
+        "left_object_id": "6",
+        "overlap_height_in": 0.3125,
+        "overlap_width_in": 4.1979,
+        "right_object_id": "7",
+        "slide": 5
+      }
+    ],
+    "exitCode": 0,
+    "findingCount": 0,
+    "fontPolicy": {
+      "checked_text_script_count": 108,
+      "native_font_rendering_verified": false,
+      "observed_font_families": [
+        "Georgia",
+        "Leelawadee"
+      ],
+      "observed_font_use_counts": {
+        "Georgia": 4,
+        "Leelawadee": 104
+      },
+      "passed": true,
+      "performed": true
+    }
+  },
+  "fontSelection": {
+    "basis": "design",
+    "approvedFamilies": [
+      "Leelawadee",
+      "Georgia"
+    ],
+    "scriptFonts": {},
+    "referenceSha256": null,
+    "referenceFontsVerifiedInEncodedText": false,
+    "checked_text_script_count": 108,
+    "native_font_rendering_verified": false,
+    "observed_font_families": [
+      "Georgia",
+      "Leelawadee"
+    ],
+    "observed_font_use_counts": {
+      "Georgia": 4,
+      "Leelawadee": 104
+    },
+    "passed": true,
+    "performed": true
+  },
+  "firstPartyImport": {
+    "performed": true,
+    "passed": true,
+    "slideCount": 5,
+    "sha256": "bcdc941a7bc46be6f8446e663bdcf16bdf52739f4269bb75cb04cdf06f3d9460",
+    "runtimeNodeModules": "C:\\Users\\Admin\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\node_modules",
+    "nodeExecutable": "C:\\Users\\Admin\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe"
+  },
+  "nativeTableArithmetic": {
+    "performed": true,
+    "checked_column_count": 0,
+    "checks": [],
+    "claim_boundary": "Displayed-value arithmetic with rounding tolerance; not source-data verification.",
+    "eligible_table_count": 0,
+    "finding_count": 0,
+    "findings": [],
+    "native_table_count": 0,
+    "passed": true,
+    "schema_version": "presentation-native-table-arithmetic.v1",
+    "skipped_tables": [],
+    "slide_count": 5,
+    "warning_count": 0,
+    "warnings": []
+  },
+  "nativeChartTitles": {
+    "performed": true,
+    "checks": [],
+    "finding_count": 0,
+    "findings": [],
+    "native_chart_count": 0,
+    "native_powerpoint_verified": false,
+    "passed": true,
+    "presentation_sha256": "bcdc941a7bc46be6f8446e663bdcf16bdf52739f4269bb75cb04cdf06f3d9460",
+    "schema_version": "presentation-native-chart-titles.v1",
+    "slide_count": 5,
+    "source_text_emitted": false,
+    "unresolved_linked_title_count": 0
+  },
+  "sourceDerivedPolicyFlags": [
+    "--expected-slide-size-emu",
+    "12192000,6858000",
+    "--validate-heading-fit",
+    "--cover-role",
+    "none",
+    "--expected-slide-count",
+    "5",
+    "--approved-font-family",
+    "Leelawadee",
+    "--approved-font-family",
+    "Georgia"
+  ],
+  "nativeChartValidation": {
+    "detectedOwnerSlides": [],
+    "detectedChartCount": 0,
+    "targetApplication": null,
+    "sourceChartOwnersExplicitlyDeclared": false,
+    "validatorRan": false,
+    "passed": true
+  }
+}
