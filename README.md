@@ -18,7 +18,7 @@ Diagnostics describe the machine running DevPulse. A hosted deployment reports i
 ## Features
 
 - **Overview:** API health, process metrics, live CPU/memory/thread charts, host information, disk charts, folder usage, and TCP scanning.
-- **Operations:** owner-allowlisted HTTP/TCP watchlist, ping matrix, DNS lookup, TLS certificate expiry, database connectivity, and live log tailing.
+- **Operations:** owner-allowlisted service watchlist plus bounded one-off public-host ping, DNS, TLS, and database connectivity checks, with live log tailing.
 - **Telemetry:** persisted metric history, request traces, threshold incidents, deployment identity, and optional OTLP export.
 - **Inspectors:** public-URL JSON explorer, SHA-256 file hashing, password-based AES-256-GCM file encryption/decryption, local JWT decoding, and a bounded HTTP load tester.
 - **Administration:** separate administrator cookie, process listing/termination, maintenance mode, audit history, and redacted diagnostics ZIP export.
@@ -94,11 +94,13 @@ Configure the administrator password through user-secrets or the hosting secret 
 dotnet user-secrets set "Admin:Password" "A-unique-password-of-at-least-12-characters"
 ```
 
-Network hosts, ports, logs, and databases cannot be supplied freely by visitors. They must be placed in the owner-controlled allowlists.
+Scheduled watchlist targets, the TCP port scanner, and log files remain owner-controlled through configuration. Arbitrary log paths are never accepted from visitors.
 
 The JSON explorer accepts a user-entered public HTTP or HTTPS URL and uses configured URLs as suggestions. Its outbound client disables redirects, resolves and pins the destination address at connection time, and rejects loopback, private, link-local, and reserved targets to prevent server-side request forgery. Owner-approved URLs remain available for intentionally configured private services. JSON responses are limited to 2 MB. Log output and uploaded file contents are never included in request telemetry; uploaded files are processed in memory and are not stored.
 
 The mini load tester accepts public HTTP or HTTPS URLs with the same network protections and configured private-service exceptions. Users must acknowledge that they own or have permission to test the target. Each run is capped at 25 GET requests, five workers, and a 10-second client timeout; only one arbitrary public run can execute at a time across the application. These controls reduce accidental abuse but do not replace authentication or a private access gateway for a production diagnostics deployment.
+
+The Operations page accepts a one-off public domain, IP address, or URL for a single Ping, DNS resolution, or port-443 TLS inspection. It also accepts one public host and port for a TCP or Redis health check. Private and reserved destinations are blocked unless the exact target is owner-configured, and the UI requires a permission acknowledgment for active network checks. Scheduled checks and broad TCP scanning remain allowlisted.
 
 The file encryption tool creates authenticated `.devpulse` packages with AES-256-GCM and a key derived from the user's password. Use a unique password of at least 12 characters. The password is not stored, and a lost password cannot be recovered. SHA-256 remains available for integrity checking; hashes cannot be decrypted.
 

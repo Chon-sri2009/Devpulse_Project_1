@@ -338,6 +338,38 @@ var tests = new List<(string Name, Func<Task> Run)>
         catch (InvalidOperationException) { return; }
         throw new InvalidOperationException("Expected allowlist rejection");
     }),
+    ("One-off network target accepts domains, IPs, and URLs", () =>
+    {
+        Check(PublicHttpTarget.ParseHost("example.com") == "example.com");
+        Check(PublicHttpTarget.ParseHost("https://example.com/health") == "example.com");
+        Check(PublicHttpTarget.ParseHost("8.8.8.8") == "8.8.8.8");
+        return Task.CompletedTask;
+    }),
+    ("One-off network checks block unapproved private targets", async () =>
+    {
+        var network = new NetworkDiagnosticsService(new(), new TestHttpFactory(_ => new(HttpStatusCode.OK)));
+        foreach (var check in new Func<Task>[]
+        {
+            async () => { await network.PingTargetAsync("127.0.0.1", default); },
+            async () => { await network.ResolveTargetAsync("10.0.0.1", default); },
+            async () => { await network.InspectTlsTargetAsync("192.168.1.1", default); },
+            async () => { await network.CheckDatabaseTargetAsync("[::1]", 5432, "TCP", default); }
+        })
+        {
+            try { await check(); }
+            catch (InvalidOperationException) { continue; }
+            throw new InvalidOperationException("Expected private target rejection");
+        }
+    }),
+    ("Owner-configured private database target can be checked directly", async () =>
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        var options = new OperationsSettings { Databases = [new() { Name = "Local test", Host = "127.0.0.1", Port = port, Kind = "TCP" }] };
+        var network = new NetworkDiagnosticsService(options, new TestHttpFactory(_ => new(HttpStatusCode.OK)));
+        var result = await network.CheckDatabaseTargetAsync("127.0.0.1", port, "TCP", default);
+        Check(result.Healthy && result.Kind == "TCP");
+    }),
     ("Public JSON URLs accept a domain without a scheme", async () =>
     {
         string? requested = null;

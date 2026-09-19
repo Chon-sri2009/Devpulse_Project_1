@@ -32,10 +32,24 @@ public sealed class NetworkDiagnosticsService(OperationsSettings settings, IHttp
     public async Task<PingResult> PingAsync(string host, CancellationToken ct)
     {
         EnsureHost(host);
+        return await PingCoreAsync(host, null, ct);
+    }
+
+    public async Task<PingResult> PingTargetAsync(string value, CancellationToken ct)
+    {
+        var host = PublicHttpTarget.ParseHost(value);
+        if (IsApprovedHost(host)) return await PingCoreAsync(host, null, ct);
+        var addresses = await PublicHttpTarget.ResolvePublicAddressesAsync(host, ct);
+        var address = addresses.OrderBy(x => x.AddressFamily == AddressFamily.InterNetwork ? 0 : 1).First();
+        return await PingCoreAsync(host, address, ct);
+    }
+
+    private static async Task<PingResult> PingCoreAsync(string host, IPAddress? address, CancellationToken ct)
+    {
         try
         {
             using var ping = new Ping();
-            var reply = await ping.SendPingAsync(host, 2000).WaitAsync(ct);
+            var reply = await (address is null ? ping.SendPingAsync(host, 2000) : ping.SendPingAsync(address, 2000)).WaitAsync(ct);
             return new(host, reply.Status == IPStatus.Success, reply.RoundtripTime, reply.Status.ToString());
         }
         catch (Exception ex) when (ex is PingException or SocketException)
@@ -55,14 +69,43 @@ public sealed class NetworkDiagnosticsService(OperationsSettings settings, IHttp
         { return new(host, [], watch.ElapsedMilliseconds, "DNS lookup failed."); }
     }
 
+    public async Task<DnsResult> ResolveTargetAsync(string value, CancellationToken ct)
+    {
+        var host = PublicHttpTarget.ParseHost(value);
+        if (IsApprovedHost(host)) return await ResolveAsync(host, ct);
+        var watch = Stopwatch.StartNew();
+        var addresses = await PublicHttpTarget.ResolvePublicAddressesAsync(host, ct);
+        return new(host, addresses.Select(x => x.ToString()).ToArray(), watch.ElapsedMilliseconds, null);
+    }
+
     public async Task<TlsResult> InspectTlsAsync(string host, CancellationToken ct)
     {
         EnsureHost(host);
+        return await InspectTlsCoreAsync(host, null, ct);
+    }
+
+    public async Task<TlsResult> InspectTlsTargetAsync(string value, CancellationToken ct)
+    {
+        var host = PublicHttpTarget.ParseHost(value);
+        if (IsApprovedHost(host)) return await InspectTlsCoreAsync(host, null, ct);
+        var addresses = await PublicHttpTarget.ResolvePublicAddressesAsync(host, ct);
+        TlsResult? last = null;
+        foreach (var address in addresses.Take(4))
+        {
+            last = await InspectTlsCoreAsync(host, address, ct);
+            if (last.Valid) return last;
+        }
+        return last ?? new(host, false, "", "", null, 0, 0, "TLS connection failed.");
+    }
+
+    private static async Task<TlsResult> InspectTlsCoreAsync(string host, IPAddress? address, CancellationToken ct)
+    {
         var watch = Stopwatch.StartNew();
         try
         {
             using var tcp = new TcpClient();
-            await tcp.ConnectAsync(host, 443, ct);
+            if (address is null) await tcp.ConnectAsync(host, 443, ct);
+            else await tcp.ConnectAsync(address, 443, ct);
             using var ssl = new SslStream(tcp.GetStream(), false);
             await ssl.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
             { TargetHost = host, EnabledSslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13 }, ct);
@@ -104,8 +147,30 @@ public sealed class NetworkDiagnosticsService(OperationsSettings settings, IHttp
     public async Task<IReadOnlyList<DatabaseHealthResult>> CheckDatabasesAsync(CancellationToken ct)
     {
         var tasks = settings.Databases.Where(x => IsApprovedHost(x.Host) && x.Port is > 0 and <= 65535)
-            .Select(x => CheckDatabaseAsync(x, ct));
+            .Select(x => CheckDatabaseCoreAsync(x, null, ct));
         return await Task.WhenAll(tasks);
+    }
+
+    public async Task<DatabaseHealthResult> CheckDatabaseTargetAsync(string value, int port, string kind, CancellationToken ct)
+    {
+        var host = PublicHttpTarget.ParseHost(value);
+        if (port is <= 0 or > 65535) throw new InvalidOperationException("Port must be between 1 and 65,535.");
+        kind = kind.Trim();
+        if (!kind.Equals("TCP", StringComparison.OrdinalIgnoreCase) && !kind.Equals("Redis", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Database check kind must be TCP or Redis.");
+        kind = kind.Equals("Redis", StringComparison.OrdinalIgnoreCase) ? "Redis" : "TCP";
+        var target = new DatabaseTarget { Name = $"{host}:{port}", Host = host, Port = port, Kind = kind };
+        var approved = settings.Databases.Any(x => x.Host.Equals(host, StringComparison.OrdinalIgnoreCase) && x.Port == port);
+        if (approved) return await CheckDatabaseCoreAsync(target, null, ct);
+
+        var addresses = await PublicHttpTarget.ResolvePublicAddressesAsync(host, ct);
+        DatabaseHealthResult? last = null;
+        foreach (var address in addresses.Take(4))
+        {
+            last = await CheckDatabaseCoreAsync(target, address, ct);
+            if (last.Healthy) return last;
+        }
+        return last ?? new(target.Name, target.Kind, false, 0, "Unavailable");
     }
 
     private Func<CancellationToken, Task<WatchResult>> CheckUrlAsync(string url) => async ct =>
@@ -135,14 +200,15 @@ public sealed class NetworkDiagnosticsService(OperationsSettings settings, IHttp
         { return new($"{host}:{port}", "TCP", false, watch.ElapsedMilliseconds, "Closed"); }
     }
 
-    private static async Task<DatabaseHealthResult> CheckDatabaseAsync(DatabaseTarget target, CancellationToken ct)
+    private static async Task<DatabaseHealthResult> CheckDatabaseCoreAsync(DatabaseTarget target, IPAddress? address, CancellationToken ct)
     {
         var watch = Stopwatch.StartNew();
         try
         {
             using var tcp = new TcpClient();
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct); timeout.CancelAfter(2000);
-            await tcp.ConnectAsync(target.Host, target.Port, timeout.Token);
+            if (address is null) await tcp.ConnectAsync(target.Host, target.Port, timeout.Token);
+            else await tcp.ConnectAsync(address, target.Port, timeout.Token);
             if (target.Kind.Equals("Redis", StringComparison.OrdinalIgnoreCase))
             {
                 var bytes = "*1\r\n$4\r\nPING\r\n"u8.ToArray();

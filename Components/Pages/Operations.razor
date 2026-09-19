@@ -8,29 +8,36 @@
 <PageTitle>Operations | DevPulse</PageTitle>
 <div class="feature-page">
     <header class="feature-hero"><p class="eyebrow">Network and host operations</p><h1>Service operations</h1>
-        <p>Run bounded checks against targets selected by the application owner.</p></header>
+        <p>Run bounded checks against configured services or a public target you are authorized to test.</p></header>
     @if (error is not null) { <p class="notice error" role="alert">@error</p> }
     <section class="feature-grid-wide">
         <article class="feature-card span-two"><h2>Service Watchlist</h2><p>HTTP and TCP availability across the configured allowlist.</p>
             <button class="action" disabled="@busy" @onclick="CheckWatchlist">Check all services</button>
             @if (watchlist is not null) { <div class="result-table">@foreach (var item in watchlist) { <div><strong>@item.Name</strong><span>@item.Kind</span><span class="@(item.Healthy ? "good" : "bad")">@item.Status</span><span>@item.LatencyMs ms</span></div> }</div> }
         </article>
-        <article class="feature-card"><h2>Network Ping Matrix</h2><p>ICMP latency for approved hosts.</p>
-            <button class="action" disabled="@busy" @onclick="PingHosts">Ping approved hosts</button>
+        <article class="feature-card span-two target-card"><h2>One-off public target</h2><p>Enter a domain, IP address, or URL for Ping, DNS, and TLS inspection.</p>
+            <input class="form-control" type="text" list="approved-network-hosts" @bind="selectedHost" @bind:event="oninput" placeholder="example.com" aria-label="Network target host" />
+            <datalist id="approved-network-hosts">@foreach (var host in Network.Hosts) { <option value="@host"></option> }</datalist>
+            <label class="permission-check"><input type="checkbox" @bind="hostAuthorized" /> I own this target or have permission to run network checks against it.</label>
+            <small>Unconfigured localhost, private, link-local, and reserved addresses are blocked.</small>
+        </article>
+        <article class="feature-card"><h2>Network Ping</h2><p>Run one bounded ICMP latency check against the target above.</p>
+            <button class="action" disabled="@(busy || !hostAuthorized || string.IsNullOrWhiteSpace(selectedHost))" @onclick="PingHost">Ping target</button>
             @if (pings is not null) { <div class="stack-results">@foreach (var item in pings) { <div><strong>@item.Host</strong><span class="@(item.Reachable ? "good" : "bad")">@item.Status · @item.LatencyMs ms</span></div> }</div> }
         </article>
-        <article class="feature-card"><h2>DNS Inspector</h2><p>Resolve addresses without accepting arbitrary hosts.</p>
-            <select class="form-select" @bind="selectedHost">@foreach (var host in Network.Hosts) { <option value="@host">@host</option> }</select>
-            <button class="action" disabled="@busy" @onclick="ResolveDns">Resolve DNS</button>
+        <article class="feature-card"><h2>DNS Inspector</h2><p>Resolve the public addresses for the target above.</p>
+            <button class="action" disabled="@(busy || string.IsNullOrWhiteSpace(selectedHost))" @onclick="ResolveDns">Resolve DNS</button>
             @if (dns is not null) { <div class="code-result"><strong>@dns.DurationMs ms</strong>@foreach (var address in dns.Addresses) { <code>@address</code> }@if (dns.Error is not null) { <span class="bad">@dns.Error</span> }</div> }
         </article>
         <article class="feature-card"><h2>TLS Certificate Monitor</h2><p>Inspect port 443 certificate identity and expiry.</p>
-            <button class="action" disabled="@(busy || string.IsNullOrEmpty(selectedHost))" @onclick="InspectTls">Inspect @selectedHost</button>
+            <button class="action" disabled="@(busy || !hostAuthorized || string.IsNullOrWhiteSpace(selectedHost))" @onclick="InspectTls">Inspect target</button>
             @if (tls is not null) { <div class="detail-list"><span>Subject <strong>@tls.Subject</strong></span><span>Expires <strong>@(tls.Expires?.ToString("u") ?? "Unavailable")</strong></span><span>Remaining <strong class="@(tls.Valid && tls.DaysRemaining > 14 ? "good" : "bad")">@tls.DaysRemaining days</strong></span>@if(tls.Error is not null){<span class="bad">@tls.Error</span>}</div> }
         </article>
-        <article class="feature-card"><h2>Database Health</h2><p>TCP connectivity, with protocol PING for configured Redis targets.</p>
-            @if (Settings.Databases.Length == 0) { <p class="muted">No database targets configured.</p> }
-            else { <button class="action" disabled="@busy" @onclick="CheckDatabases">Check databases</button> }
+        <article class="feature-card"><h2>Database Health</h2><p>Check one public TCP service, with an optional Redis protocol PING.</p>
+            <div class="database-controls"><input class="form-control" type="text" @bind="databaseHost" placeholder="db.example.com" aria-label="Database host" /><label>Port <input type="number" min="1" max="65535" @bind="databasePort" /></label><label>Kind <select @bind="databaseKind"><option value="TCP">TCP</option><option value="Redis">Redis</option></select></label></div>
+            <label class="permission-check"><input type="checkbox" @bind="databaseAuthorized" /> I own this database target or have permission to check it.</label>
+            <button class="action" disabled="@(busy || !databaseAuthorized || string.IsNullOrWhiteSpace(databaseHost))" @onclick="CheckDatabaseTarget">Check target</button>
+            @if (Settings.Databases.Length > 0) { <button class="action secondary" disabled="@busy" @onclick="CheckDatabases">Check configured list</button> }
             @if (databases is not null) { <div class="stack-results">@foreach (var item in databases) { <div><strong>@item.Name <small>@item.Kind</small></strong><span class="@(item.Healthy ? "good" : "bad")">@item.Status · @item.LatencyMs ms</span></div> }</div> }
         </article>
         <article class="feature-card span-two"><h2>Live Log Tailer</h2><p>Shows the final 200 lines of an owner-approved file and refreshes every two seconds.</p>
@@ -42,18 +49,19 @@
     </section>
 </div>
 @code {
-    private bool busy; private string? error;
-    private string selectedHost = "", selectedLog = "";
+    private bool busy, hostAuthorized, databaseAuthorized; private string? error;
+    private string selectedHost = "", selectedLog = "", databaseHost = "", databaseKind = "TCP"; private int databasePort = 5432;
     private IReadOnlyList<WatchResult>? watchlist; private IReadOnlyList<PingResult>? pings;
     private IReadOnlyList<DatabaseHealthResult>? databases; private DnsResult? dns; private TlsResult? tls; private LogSnapshot? log;
     private CancellationTokenSource? tailCancellation; private Task? tailTask;
-    protected override void OnInitialized() { selectedHost = Network.Hosts.FirstOrDefault() ?? ""; selectedLog = Tools.ApprovedLogs.FirstOrDefault() ?? ""; }
+    protected override void OnInitialized() { selectedHost = Network.Hosts.FirstOrDefault() ?? ""; selectedLog = Tools.ApprovedLogs.FirstOrDefault() ?? ""; var database = Settings.Databases.FirstOrDefault(); if(database is not null){databaseHost=database.Host;databasePort=database.Port;databaseKind=database.Kind;} }
     private async Task Run(Func<Task> action) { if (busy) return; busy = true; error = null; try { await action(); } catch(Exception ex) when(ex is not OperationCanceledException){ error = ex.Message; } finally { busy = false; } }
     private Task CheckWatchlist() => Run(async () => watchlist = await Network.CheckWatchlistAsync(default));
-    private Task PingHosts() => Run(async () => pings = await Network.PingAllAsync(default));
-    private Task ResolveDns() => Run(async () => dns = await Network.ResolveAsync(selectedHost, default));
-    private Task InspectTls() => Run(async () => tls = await Network.InspectTlsAsync(selectedHost, default));
+    private Task PingHost() => Run(async () => pings = [await Network.PingTargetAsync(selectedHost, default)]);
+    private Task ResolveDns() => Run(async () => dns = await Network.ResolveTargetAsync(selectedHost, default));
+    private Task InspectTls() => Run(async () => tls = await Network.InspectTlsTargetAsync(selectedHost, default));
     private Task CheckDatabases() => Run(async () => databases = await Network.CheckDatabasesAsync(default));
+    private Task CheckDatabaseTarget() => Run(async () => databases = [await Network.CheckDatabaseTargetAsync(databaseHost, databasePort, databaseKind, default)]);
     private async Task ToggleTail() { if (tailTask is not null) { await tailCancellation!.CancelAsync(); await tailTask; tailCancellation.Dispose(); tailCancellation = null; tailTask = null; return; } tailCancellation = new(); tailTask = Tail(tailCancellation.Token); }
     private async Task Tail(CancellationToken ct) { try { using var timer = new PeriodicTimer(TimeSpan.FromSeconds(2)); do { log = Tools.ReadLog(selectedLog); await InvokeAsync(StateHasChanged); } while(await timer.WaitForNextTickAsync(ct)); } catch(OperationCanceledException) when(ct.IsCancellationRequested){} }
     public async ValueTask DisposeAsync() { if(tailCancellation is not null){ await tailCancellation.CancelAsync(); if(tailTask is not null) await tailTask; tailCancellation.Dispose(); } }

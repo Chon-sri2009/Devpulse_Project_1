@@ -19,6 +19,19 @@ public static class PublicHttpTarget
         return uri;
     }
 
+    public static string ParseHost(string? value)
+    {
+        value = value?.Trim();
+        if (string.IsNullOrWhiteSpace(value)) throw new InvalidOperationException("Enter a host name or IP address.");
+        var candidate = value.Contains("://", StringComparison.Ordinal) ? value : $"https://{value}";
+        if (!Uri.TryCreate(candidate, UriKind.Absolute, out var uri)
+            || uri.Scheme is not ("http" or "https")
+            || string.IsNullOrWhiteSpace(uri.DnsSafeHost)
+            || !string.IsNullOrEmpty(uri.UserInfo))
+            throw new InvalidOperationException("Enter a valid host name or IP address.");
+        return uri.DnsSafeHost;
+    }
+
     public static async Task EnsurePublicAsync(Uri uri, CancellationToken ct)
     {
         var addresses = await ResolvePublicAddressesAsync(uri.DnsSafeHost, ct);
@@ -86,7 +99,7 @@ public static class PublicHttpTarget
         throw new HttpRequestException("The public host could not be reached.", lastError);
     }
 
-    private static async Task<IPAddress[]> ResolvePublicAddressesAsync(string host, CancellationToken ct)
+    public static async Task<IPAddress[]> ResolvePublicAddressesAsync(string host, CancellationToken ct)
     {
         IPAddress[] addresses;
         try
