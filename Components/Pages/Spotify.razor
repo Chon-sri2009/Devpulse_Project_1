@@ -68,6 +68,51 @@
                     @if (browserError is not null) { <p role="alert" class="browser-error">@browserError</p> }
                 </section>
 
+                <section class="music-browser" aria-busy="@tracksLoading">
+                    <div class="album-library-header">
+                        <div><p class="connection-label">Spotify catalog and library</p><h2>Find and play a song</h2><p>Search Spotify, open your Liked Songs, or inspect the active playback queue.</p></div>
+                    </div>
+                    <div class="music-search">
+                        <input class="form-control" maxlength="100" @bind="trackQuery" @bind:event="oninput" placeholder="Song, artist, album, or Spotify search filters" aria-label="Search Spotify songs" />
+                        <button class="spotify-button connect-button" disabled="@(busy || tracksLoading || string.IsNullOrWhiteSpace(trackQuery))" @onclick="SearchTracks">Search songs</button>
+                        <button class="spotify-button secondary-button" disabled="@(busy || tracksLoading)" @onclick="LoadLikedSongs">Liked Songs</button>
+                        <button class="spotify-button secondary-button" disabled="@(busy || tracksLoading)" @onclick="LoadQueue">View queue</button>
+                    </div>
+                    @if (trackError is not null) { <p role="alert" class="error-message">@trackError</p> }
+                    @if (trackMessage is not null) { <p role="status" class="album-message">@trackMessage</p> }
+                    @if (tracksLoading) { <p role="status">Loading songs…</p> }
+                    else if (trackPage is not null)
+                    {
+                        <div class="track-heading"><h3>@trackPage.Title</h3><span>@trackPage.Total songs</span></div>
+                        @if (trackPage.Items.Count == 0) { <p>No playable songs were returned.</p> }
+                        else
+                        {
+                            <div class="track-list">
+                                @foreach (var track in trackPage.Items)
+                                {
+                                    <article class="track-row">
+                                        @if (track.Image is not null) { <img src="@track.Image" alt="" width="54" height="54" loading="lazy" /> }
+                                        else { <div class="track-placeholder" aria-hidden="true">♫</div> }
+                                        <div class="track-copy"><strong>@track.Name @if(track.Explicit){<span class="explicit">E</span>}</strong><span>@track.Artists @if(!string.IsNullOrEmpty(track.Album)){<text> · @track.Album</text>}</span></div>
+                                        <span class="track-time">@Duration(track.DurationMs)</span>
+                                        @if (track.Link is not null) { <a class="spotify-link" href="@track.Link" target="_blank" rel="noopener" aria-label="Open @track.Name on Spotify">Spotify</a> }
+                                        <button class="spotify-button connect-button" disabled="@(busy || !track.Playable)" @onclick='() => PlayTrack(track)'>Play</button>
+                                        <button class="spotify-button secondary-button" disabled="@(busy || !CanControl || !track.Playable)" @onclick='() => QueueTrack(track)'>Queue</button>
+                                    </article>
+                                }
+                            </div>
+                        }
+                        @if (trackSource != "queue")
+                        {
+                            <div class="album-pagination">
+                                <button class="spotify-button secondary-button" disabled="@(!trackPage.HasPrevious || tracksLoading)" @onclick="PreviousTracks">Previous</button>
+                                <span>Songs @(trackPage.Items.Count == 0 ? 0 : trackPage.Offset + 1)–@(trackPage.Offset + trackPage.Items.Count) of @trackPage.Total</span>
+                                <button class="spotify-button secondary-button" disabled="@(!trackPage.HasNext || tracksLoading)" @onclick="NextTracks">Next</button>
+                            </div>
+                        }
+                    }
+                </section>
+
                 <section class="album-library" aria-busy="@albumsLoading">
                     <div class="album-library-header">
                         <div>
@@ -104,8 +149,8 @@
                                     <div class="album-details">
                                         <h3 title="@album.Name">@album.Name</h3>
                                         <p title="@album.Artists">@album.Artists</p>
-                                        <button class="spotify-button connect-button" disabled="@(busy || albumsLoading)"
-                                            @onclick='() => PlayAlbum(album)'>Play album</button>
+                                        <div class="library-actions"><button class="spotify-button connect-button" disabled="@(busy || albumsLoading)"
+                                            @onclick='() => PlayAlbum(album)'>Play</button><button class="spotify-button secondary-button" disabled="@(busy || tracksLoading)" @onclick='() => BrowseAlbum(album)'>Songs</button></div>
                                     </div>
                                 </article>
                             }
@@ -156,8 +201,8 @@
                                     <div class="album-details">
                                         <h3 title="@playlist.Name">@playlist.Name</h3>
                                         <p title="Owned by @playlist.Owner">@playlist.Tracks tracks · @PlaylistKind(playlist)</p>
-                                        <button class="spotify-button connect-button" disabled="@(busy || playlistsLoading)"
-                                            @onclick='() => PlayPlaylist(playlist)'>Play playlist</button>
+                                        <div class="library-actions"><button class="spotify-button connect-button" disabled="@(busy || playlistsLoading)"
+                                            @onclick='() => PlayPlaylist(playlist)'>Play</button><button class="spotify-button secondary-button" disabled="@(busy || tracksLoading)" @onclick='() => BrowsePlaylist(playlist)'>Songs</button></div>
                                     </div>
                                 </article>
                             }
@@ -201,6 +246,8 @@
                         <button class="spotify-button connect-button" disabled="@(busy || !CanControl || Blocked(playback?.Playing == true ? "pausing" : "resuming"))"
                             @onclick='() => Command(playback?.Playing == true ? "pause" : "play")'>@(playback?.Playing == true ? "Pause" : "Play")</button>
                         <button class="spotify-button secondary-button" disabled="@(busy || !CanControl || Blocked("skipping_next"))" @onclick='() => Command("next")'>Next</button>
+                        <button class="spotify-button secondary-button" disabled="@(busy || !CanControl || Blocked("toggling_shuffle"))" @onclick="ToggleShuffle">Shuffle: @(playback?.Shuffle == true ? "On" : "Off")</button>
+                        <label class="repeat-control">Repeat<select class="form-select" value="@(playback?.Repeat ?? "off")" @onchange="ChangeRepeat" disabled="@(busy || !CanControl || Blocked("toggling_repeat_context"))"><option value="off">Off</option><option value="context">Album/playlist</option><option value="track">Song</option></select></label>
                         <button class="spotify-button secondary-button" disabled="@busy" @onclick="Refresh">Refresh playback</button>
                         <a href="https://open.spotify.com/" target="_blank" rel="noopener" class="spotify-button secondary-button">Open Spotify</a>
                     </div>
@@ -246,14 +293,18 @@
     private SpotifyPlayback? playback;
     private SpotifyAlbumPage? albumPage;
     private SpotifyPlaylistPage? playlistPage;
+    private SpotifyTrackPage? trackPage;
+    private SpotifyAlbum? browsedAlbum;
+    private SpotifyPlaylist? browsedPlaylist;
     private IReadOnlyList<SpotifyDevice> devices = [];
     private IJSObjectReference? spotifyModule;
     private DotNetObjectReference<Spotify>? selfReference;
-    private string? error, browserError, albumError, albumMessage, playlistError, playlistMessage;
+    private string? error, browserError, albumError, albumMessage, playlistError, playlistMessage, trackError, trackMessage;
+    private string trackQuery = "", trackSource = "";
     private string browserStatus = "Browser audio is off";
     private string browserDeviceId = "";
     private string selectedDevice = "";
-    private bool busy, loaded, needsLogin, pageVisible = true, albumsLoading, playlistsLoading;
+    private bool busy, loaded, needsLogin, pageVisible = true, albumsLoading, playlistsLoading, tracksLoading;
     private bool browserPlayerEnabled, browserLoading, deviceSelectionPinned;
     private int? volumeEdit, pendingSeek;
     private int progressAnchor;
@@ -441,6 +492,89 @@
     private static string PlaylistKind(SpotifyPlaylist playlist) => playlist.Collaborative
         ? "Collaborative" : playlist.Public switch { true => "Public", false => "Private", _ => $"By {playlist.Owner}" };
 
+    private Task SearchTracks() { trackSource = "search"; return LoadTracks(0); }
+    private Task LoadLikedSongs() { trackSource = "liked"; return LoadTracks(0); }
+    private Task BrowseAlbum(SpotifyAlbum album) { browsedAlbum = album; browsedPlaylist = null; trackSource = "album"; return LoadTracks(0); }
+    private Task BrowsePlaylist(SpotifyPlaylist playlist) { browsedPlaylist = playlist; browsedAlbum = null; trackSource = "playlist"; return LoadTracks(0); }
+    private Task PreviousTracks() => trackPage is null ? Task.CompletedTask : LoadTracks(Math.Max(0, trackPage.Offset - Math.Max(1, trackPage.Limit)));
+    private Task NextTracks() => trackPage is null ? Task.CompletedTask : LoadTracks(trackPage.Offset + Math.Max(1, trackPage.Limit));
+
+    private async Task LoadTracks(int offset)
+    {
+        if (tracksLoading || user is null) return;
+        tracksLoading = true; trackError = null; trackMessage = null; StateHasChanged();
+        try
+        {
+            SpotifyReply result = trackSource switch
+            {
+                "search" => await Player.SearchTracksAsync(user, trackQuery, offset, lifetime.Token),
+                "liked" => await Player.GetSavedTracksAsync(user, offset, 12, lifetime.Token),
+                "album" when browsedAlbum is not null => await Player.GetAlbumTracksAsync(user, browsedAlbum.Uri, offset, 20, lifetime.Token),
+                "playlist" when browsedPlaylist is not null => await Player.GetPlaylistTracksAsync(user, browsedPlaylist.Uri, offset, 20, lifetime.Token),
+                _ => new SpotifyReply(400, Error: "Choose music to browse first.")
+            };
+            if (!Accept(result)) { trackError = result.Error; return; }
+            trackPage = result.Data is not { } data ? new([], 0, 10, 0, "Songs") : trackSource switch
+            {
+                "search" => SpotifyPlayback.ParseSearchTracks(data, trackQuery),
+                "liked" => SpotifyPlayback.ParseSavedTracks(data),
+                "album" => SpotifyPlayback.ParseAlbumTracks(data, browsedAlbum!),
+                "playlist" => SpotifyPlayback.ParsePlaylistTracks(data, browsedPlaylist!),
+                _ => new([], 0, 10, 0, "Songs")
+            };
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
+        catch (Exception ex) { Logger.LogWarning("Spotify track browser failed: {ExceptionType}", ex.GetType().Name); trackError = "Songs could not be loaded. Try again."; }
+        finally { tracksLoading = false; if (!lifetime.IsCancellationRequested) await InvokeAsync(StateHasChanged); }
+    }
+
+    private async Task LoadQueue()
+    {
+        if (tracksLoading || user is null) return;
+        trackSource = "queue"; tracksLoading = true; trackError = null; trackMessage = null; StateHasChanged();
+        try
+        {
+            var result = await Player.GetQueueAsync(user, lifetime.Token);
+            if (!Accept(result)) { trackError = result.Error; return; }
+            var items = result.Data is { } data ? SpotifyPlayback.ParseQueue(data) : [];
+            trackPage = new(items, 0, items.Count, items.Count, "Up next");
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
+        catch (Exception ex) { Logger.LogWarning("Spotify queue failed: {ExceptionType}", ex.GetType().Name); trackError = "The playback queue could not be loaded."; }
+        finally { tracksLoading = false; if (!lifetime.IsCancellationRequested) await InvokeAsync(StateHasChanged); }
+    }
+
+    private async Task PlayTrack(SpotifyTrack track)
+    {
+        var succeeded = false;
+        await Run(async () =>
+        {
+            var target = string.IsNullOrWhiteSpace(selectedDevice) ? playback?.Device?.Id : selectedDevice;
+            var result = await Player.PlayTrackAsync(user!, track.Uri, trackPage?.ContextUri, target, lifetime.Token);
+            if (!Accept(result)) return; succeeded = true;
+        }, true);
+        if (!succeeded) return;
+        deviceSelectionPinned = false; trackMessage = $"Starting {track.Name}…"; nextSync = DateTimeOffset.MinValue; StateHasChanged();
+    }
+
+    private async Task QueueTrack(SpotifyTrack track)
+    {
+        var succeeded = false;
+        await Run(async () =>
+        {
+            var result = await Player.AddToQueueAsync(user!, track.Uri, playback?.Device?.Id, lifetime.Token);
+            if (!Accept(result)) return; succeeded = true;
+        }, true);
+        if (succeeded) { trackMessage = $"Added {track.Name} to the queue."; StateHasChanged(); }
+    }
+
+    private Task ToggleShuffle() => Command(playback?.Shuffle == true ? "shuffle-off" : "shuffle-on");
+    private Task ChangeRepeat(ChangeEventArgs args)
+    {
+        var mode = args.Value?.ToString();
+        return mode is "off" or "track" or "context" ? Command("repeat-" + mode) : Task.CompletedTask;
+    }
+
     private Task Sync(bool includeDevices, bool interactive) => Run(async () =>
     {
         var current = await Player.GetPlaybackAsync(user!, lifetime.Token);
@@ -532,6 +666,11 @@
             "pause" => playback with { Playing = false, ProgressMs = position },
             "next" or "previous" => playback with { ProgressMs = 0 },
             "seek" => playback with { ProgressMs = position },
+            "shuffle-on" => playback with { Shuffle = true },
+            "shuffle-off" => playback with { Shuffle = false },
+            "repeat-off" => playback with { Repeat = "off" },
+            "repeat-track" => playback with { Repeat = "track" },
+            "repeat-context" => playback with { Repeat = "context" },
             "volume" when playback.Device is not null => playback with
             {
                 Device = playback.Device with { Volume = volumeEdit ?? playback.Device.Volume }
@@ -630,7 +769,7 @@
         var volume = playback?.Device?.Id == browserDeviceId ? playback.Device.Volume : 50;
         SetPlayback(new SpotifyPlayback(state.Title, state.Creator, image, link, !state.Paused,
             state.Position, state.Duration, new SpotifyDevice(browserDeviceId, "DevPulse Web Player", true, false, true, volume),
-            state.Disallowed.ToHashSet(StringComparer.Ordinal)));
+            state.Disallowed.ToHashSet(StringComparer.Ordinal), playback?.Shuffle ?? false, playback?.Repeat ?? "off"));
         if (!deviceSelectionPinned) selectedDevice = browserDeviceId;
         devices = devices.Select(d => d with { Active = d.Id == browserDeviceId }).ToList();
         AddBrowserDevice();

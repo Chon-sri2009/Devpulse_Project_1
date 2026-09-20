@@ -151,6 +151,54 @@ var tests = new List<(string Name, Func<Task> Run)>
         using var body = JsonDocument.Parse(fixture.Requests[0].Body);
         Check(body.RootElement.GetProperty("context_uri").GetString() == "spotify:playlist:ABC123");
     }),
+    ("Spotify track search is encoded, bounded, and parsed safely", async () =>
+    {
+        using var fixture = new SpotifyFixture(); var user = await fixture.Login();
+        fixture.Replies.Enqueue(_ => JsonResponse("""{"tracks":{"offset":0,"limit":10,"total":1,"items":[{"name":"Song","uri":"spotify:track:TRACK123","artists":[{"name":"Artist"}],"album":{"name":"Album","images":[{"url":"https://i.scdn.co/image/cover"}]},"external_urls":{"spotify":"https://open.spotify.com/track/TRACK123"},"duration_ms":123000,"explicit":true,"is_playable":true}]}}"""));
+        var result = await fixture.Player.SearchTracksAsync(user, "song & artist", 0, default);
+        var page = SpotifyPlayback.ParseSearchTracks(result.Data!.Value, "song & artist");
+        Check(result.Success && fixture.Requests[0].Uri.Contains("search?q=song%20%26%20artist&type=track&limit=10"));
+        Check(page.Items.Count == 1 && page.Items[0].Name == "Song" && page.Items[0].Artists == "Artist");
+        Check(page.Items[0].Explicit && page.Items[0].Playable && page.Items[0].DurationMs == 123000);
+        Check((await fixture.Player.SearchTracksAsync(user, "", 0, default)).Status == 400 && fixture.Requests.Count == 1);
+    }),
+    ("Liked songs and queue tracks parse their different response shapes", () =>
+    {
+        using var likedJson = JsonDocument.Parse("""{"offset":0,"limit":20,"total":1,"items":[{"added_at":"2026-01-01T00:00:00Z","track":{"name":"Liked","uri":"spotify:track:LIKED1","artists":[{"name":"Artist"}],"album":{"name":"Album"},"duration_ms":60000}}]}""");
+        using var queueJson = JsonDocument.Parse("""{"queue":[{"name":"Next","uri":"spotify:track:NEXT1","artists":[{"name":"Artist"}],"album":{"name":"Album"},"duration_ms":90000},{"name":"Unsafe","uri":"https://attacker.example"}]}""");
+        var liked = SpotifyPlayback.ParseSavedTracks(likedJson.RootElement);
+        var queue = SpotifyPlayback.ParseQueue(queueJson.RootElement);
+        Check(liked.Items.Count == 1 && liked.Items[0].Name == "Liked" && liked.Total == 1);
+        Check(queue.Count == 1 && queue[0].Name == "Next");
+        return Task.CompletedTask;
+    }),
+    ("Exact track playback supports standalone and album context", async () =>
+    {
+        using var fixture = new SpotifyFixture(); var user = await fixture.Login();
+        fixture.Replies.Enqueue(_ => new(HttpStatusCode.NoContent));
+        fixture.Replies.Enqueue(_ => new(HttpStatusCode.NoContent));
+        Check((await fixture.Player.PlayTrackAsync(user, "spotify:track:TRACK1", null, "phone", default)).Success);
+        Check((await fixture.Player.PlayTrackAsync(user, "spotify:track:TRACK2", "spotify:album:ALBUM1", "phone", default)).Success);
+        using var standalone = JsonDocument.Parse(fixture.Requests[0].Body);
+        using var contextual = JsonDocument.Parse(fixture.Requests[1].Body);
+        Check(standalone.RootElement.GetProperty("uris")[0].GetString() == "spotify:track:TRACK1");
+        Check(contextual.RootElement.GetProperty("context_uri").GetString() == "spotify:album:ALBUM1");
+        Check(contextual.RootElement.GetProperty("offset").GetProperty("uri").GetString() == "spotify:track:TRACK2");
+    }),
+    ("Queue, shuffle, and repeat commands use safe Spotify endpoints", async () =>
+    {
+        using var fixture = new SpotifyFixture(); var user = await fixture.Login();
+        for (var i = 0; i < 4; i++) fixture.Replies.Enqueue(_ => new(HttpStatusCode.NoContent));
+        Check((await fixture.Player.AddToQueueAsync(user, "spotify:track:TRACK1", "device&x=1", default)).Success);
+        Check((await fixture.Player.CommandAsync(user, "shuffle-on", "device", null, default)).Success);
+        Check((await fixture.Player.CommandAsync(user, "repeat-track", "device", null, default)).Success);
+        Check((await fixture.Player.CommandAsync(user, "repeat-context", "device", null, default)).Success);
+        Check(fixture.Requests[0].Method == "POST" && fixture.Requests[0].Uri.Contains("uri=spotify%3Atrack%3ATRACK1"));
+        Check(fixture.Requests[0].Uri.Contains("device_id=device%26x%3D1"));
+        Check(fixture.Requests[1].Uri.EndsWith("shuffle?state=true&device_id=device"));
+        Check(fixture.Requests[2].Uri.EndsWith("repeat?state=track&device_id=device"));
+        Check(fixture.Requests[3].Uri.EndsWith("repeat?state=context&device_id=device"));
+    }),
     ("Spotify 204 means idle player", async () =>
     {
         using var fixture = new SpotifyFixture();

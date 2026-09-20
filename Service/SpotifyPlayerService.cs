@@ -32,6 +32,27 @@ public sealed class SpotifyPlayerService(IHttpClientFactory clients, SpotifySett
     public Task<SpotifyReply> GetPlaylistsAsync(ClaimsPrincipal user, int offset, int limit, CancellationToken ct) =>
         SendAsync(user, HttpMethod.Get,
             $"me/playlists?limit={Math.Clamp(limit, 1, 50)}&offset={Math.Max(0, offset)}", null, ct);
+    public Task<SpotifyReply> SearchTracksAsync(ClaimsPrincipal user, string query, int offset, CancellationToken ct)
+    {
+        query = (query ?? "").Trim();
+        if (query.Length is < 1 or > 100)
+            return Task.FromResult(new SpotifyReply(400, Error: "Enter between 1 and 100 characters to search Spotify."));
+        return SendAsync(user, HttpMethod.Get,
+            $"search?q={Uri.EscapeDataString(query)}&type=track&limit=10&offset={Math.Clamp(offset, 0, 1000)}", null, ct);
+    }
+    public Task<SpotifyReply> GetSavedTracksAsync(ClaimsPrincipal user, int offset, int limit, CancellationToken ct) =>
+        SendAsync(user, HttpMethod.Get,
+            $"me/tracks?limit={Math.Clamp(limit, 1, 50)}&offset={Math.Max(0, offset)}", null, ct);
+    public Task<SpotifyReply> GetAlbumTracksAsync(ClaimsPrincipal user, string albumUri, int offset, int limit, CancellationToken ct) =>
+        SpotifyAlbum.IsSafeUri(albumUri)
+            ? SendAsync(user, HttpMethod.Get, $"albums/{albumUri[14..]}/tracks?limit={Math.Clamp(limit, 1, 50)}&offset={Math.Max(0, offset)}", null, ct)
+            : Task.FromResult(new SpotifyReply(400, Error: "Choose a valid Spotify album."));
+    public Task<SpotifyReply> GetPlaylistTracksAsync(ClaimsPrincipal user, string playlistUri, int offset, int limit, CancellationToken ct) =>
+        SpotifyPlaylist.IsSafeUri(playlistUri)
+            ? SendAsync(user, HttpMethod.Get, $"playlists/{playlistUri[17..]}/items?limit={Math.Clamp(limit, 1, 50)}&offset={Math.Max(0, offset)}", null, ct)
+            : Task.FromResult(new SpotifyReply(400, Error: "Choose a valid Spotify playlist."));
+    public Task<SpotifyReply> GetQueueAsync(ClaimsPrincipal user, CancellationToken ct) =>
+        SendAsync(user, HttpMethod.Get, "me/player/queue", null, ct);
 
     public Task<SpotifyReply> PlayAlbumAsync(ClaimsPrincipal user, string albumUri, string? deviceId, CancellationToken ct)
     {
@@ -47,6 +68,28 @@ public sealed class SpotifyPlayerService(IHttpClientFactory clients, SpotifySett
             return Task.FromResult(new SpotifyReply(400, Error: "Choose a valid playlist from your Spotify library."));
         var suffix = string.IsNullOrWhiteSpace(deviceId) ? "" : "?device_id=" + Uri.EscapeDataString(deviceId);
         return SendAsync(user, HttpMethod.Put, "me/player/play" + suffix, new { context_uri = playlistUri }, ct);
+    }
+
+    public Task<SpotifyReply> PlayTrackAsync(ClaimsPrincipal user, string trackUri, string? contextUri, string? deviceId, CancellationToken ct)
+    {
+        if (!SpotifyTrack.IsSafeUri(trackUri))
+            return Task.FromResult(new SpotifyReply(400, Error: "Choose a valid Spotify track."));
+        var suffix = string.IsNullOrWhiteSpace(deviceId) ? "" : "?device_id=" + Uri.EscapeDataString(deviceId);
+        object body;
+        if (SpotifyAlbum.IsSafeUri(contextUri) || SpotifyPlaylist.IsSafeUri(contextUri))
+            body = new { context_uri = contextUri, offset = new { uri = trackUri } };
+        else
+            body = new { uris = new[] { trackUri } };
+        return SendAsync(user, HttpMethod.Put, "me/player/play" + suffix, body, ct);
+    }
+
+    public Task<SpotifyReply> AddToQueueAsync(ClaimsPrincipal user, string trackUri, string? deviceId, CancellationToken ct)
+    {
+        if (!SpotifyTrack.IsSafeUri(trackUri))
+            return Task.FromResult(new SpotifyReply(400, Error: "Choose a valid Spotify track."));
+        var path = "me/player/queue?uri=" + Uri.EscapeDataString(trackUri);
+        if (!string.IsNullOrWhiteSpace(deviceId)) path += "&device_id=" + Uri.EscapeDataString(deviceId);
+        return SendAsync(user, HttpMethod.Post, path, null, ct);
     }
 
     public async Task<SpotifyBrowserTokenReply> GetBrowserTokenAsync(ClaimsPrincipal user, CancellationToken ct)
@@ -92,6 +135,10 @@ public sealed class SpotifyPlayerService(IHttpClientFactory clients, SpotifySett
                 "me/player/volume?volume_percent=" + value + (device.Length > 0 ? "&" + device : ""), null, ct),
             "seek" when value is >= 0 => SendAsync(user, HttpMethod.Put,
                 "me/player/seek?position_ms=" + value + (device.Length > 0 ? "&" + device : ""), null, ct),
+            "shuffle-on" or "shuffle-off" => SendAsync(user, HttpMethod.Put,
+                "me/player/shuffle?state=" + (command == "shuffle-on" ? "true" : "false") + (device.Length > 0 ? "&" + device : ""), null, ct),
+            "repeat-off" or "repeat-track" or "repeat-context" => SendAsync(user, HttpMethod.Put,
+                "me/player/repeat?state=" + command[7..] + (device.Length > 0 ? "&" + device : ""), null, ct),
             "transfer" or "transfer-play" when !string.IsNullOrWhiteSpace(deviceId) =>
                 SendAsync(user, HttpMethod.Put, "me/player",
                     new { device_ids = new[] { deviceId }, play = command == "transfer-play" }, ct),

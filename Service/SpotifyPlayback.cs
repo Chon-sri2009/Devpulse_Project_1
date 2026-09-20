@@ -31,8 +31,25 @@ public sealed record SpotifyPlaylistPage(IReadOnlyList<SpotifyPlaylist> Items, i
     public bool HasPrevious => Offset > 0;
     public bool HasNext => Offset + Items.Count < Total;
 }
+public sealed record SpotifyTrack(string Uri, string Name, string Artists, string Album, string? Image, string? Link,
+    int DurationMs, bool Explicit, bool Playable)
+{
+    public static bool IsSafeUri(string? value)
+    {
+        const string prefix = "spotify:track:";
+        return value is { Length: > 14 } && value.StartsWith(prefix, StringComparison.Ordinal)
+            && value[prefix.Length..].All(char.IsAsciiLetterOrDigit);
+    }
+}
+public sealed record SpotifyTrackPage(IReadOnlyList<SpotifyTrack> Items, int Offset, int Limit, int Total,
+    string Title, string? ContextUri = null)
+{
+    public bool HasPrevious => Offset > 0;
+    public bool HasNext => Offset + Items.Count < Total;
+}
 public sealed record SpotifyPlayback(string Title, string Creator, string? Image, string? Link,
-    bool Playing, int ProgressMs, int DurationMs, SpotifyDevice? Device, IReadOnlySet<string> Disallowed)
+    bool Playing, int ProgressMs, int DurationMs, SpotifyDevice? Device, IReadOnlySet<string> Disallowed,
+    bool Shuffle, string Repeat)
 {
     public static SpotifyPlayback Parse(JsonElement json)
     {
@@ -56,7 +73,8 @@ public sealed record SpotifyPlayback(string Title, string Creator, string? Image
         return new(Text(item, "name", "Nothing playing"), creator,
             SafeUrl(image, "i.scdn.co"), SafeUrl(Text(Property(item, "external_urls"), "spotify"), "open.spotify.com"),
             Flag(json, "is_playing"), Number(json, "progress_ms") ?? 0, Number(item, "duration_ms") ?? 0,
-            device.ValueKind == JsonValueKind.Object ? ParseDevice(device) : null, blocked);
+            device.ValueKind == JsonValueKind.Object ? ParseDevice(device) : null, blocked,
+            Flag(json, "shuffle_state"), Text(json, "repeat_state", "off"));
     }
     public static IReadOnlyList<SpotifyDevice> ParseDevices(JsonElement json)
     {
@@ -117,6 +135,55 @@ public sealed record SpotifyPlayback(string Title, string Creator, string? Image
         }
         return new(playlists, Number(json, "offset") ?? 0, Number(json, "limit") ?? playlists.Count,
             Number(json, "total") ?? playlists.Count);
+    }
+    public static SpotifyTrackPage ParseSearchTracks(JsonElement json, string query) =>
+        ParseTrackContainer(Property(json, "tracks"), "Search: " + query, null, false, null, null);
+    public static SpotifyTrackPage ParseSavedTracks(JsonElement json) =>
+        ParseTrackContainer(json, "Liked songs", null, true, null, null);
+    public static SpotifyTrackPage ParseAlbumTracks(JsonElement json, SpotifyAlbum album) =>
+        ParseTrackContainer(json, album.Name, album.Uri, false, album.Name, album.Image);
+    public static SpotifyTrackPage ParsePlaylistTracks(JsonElement json, SpotifyPlaylist playlist) =>
+        ParseTrackContainer(json, playlist.Name, playlist.Uri, true, playlist.Name, playlist.Image);
+    public static IReadOnlyList<SpotifyTrack> ParseQueue(JsonElement json)
+    {
+        var queue = Property(json, "queue");
+        return queue.ValueKind == JsonValueKind.Array
+            ? queue.EnumerateArray().Select(x => ParseTrack(x, null, null)).Where(x => x is not null).Cast<SpotifyTrack>().Take(20).ToList()
+            : [];
+    }
+    private static SpotifyTrackPage ParseTrackContainer(JsonElement container, string title, string? contextUri,
+        bool wrapped, string? fallbackAlbum, string? fallbackImage)
+    {
+        var items = Property(container, "items");
+        var tracks = new List<SpotifyTrack>();
+        if (items.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in items.EnumerateArray())
+            {
+                var track = wrapped ? Property(item, "track") : item;
+                var parsed = ParseTrack(track, fallbackAlbum, fallbackImage);
+                if (parsed is not null) tracks.Add(parsed);
+            }
+        }
+        return new(tracks, Number(container, "offset") ?? 0, Number(container, "limit") ?? tracks.Count,
+            Number(container, "total") ?? tracks.Count, title, contextUri);
+    }
+    private static SpotifyTrack? ParseTrack(JsonElement track, string? fallbackAlbum, string? fallbackImage)
+    {
+        var uri = Text(track, "uri");
+        if (!SpotifyTrack.IsSafeUri(uri)) return null;
+        var artists = Property(track, "artists");
+        var artistNames = artists.ValueKind == JsonValueKind.Array
+            ? string.Join(", ", artists.EnumerateArray().Select(x => Text(x, "name")).Where(x => x.Length > 0)) : "";
+        var album = Property(track, "album");
+        var images = Property(album, "images");
+        var image = images.ValueKind == JsonValueKind.Array && images.GetArrayLength() > 0
+            ? SafeSpotifyImage(Text(images[0], "url")) : SafeSpotifyImage(fallbackImage);
+        var playableValue = Property(track, "is_playable");
+        return new(uri, Text(track, "name", "Untitled track"), artistNames,
+            Text(album, "name", fallbackAlbum ?? ""), image,
+            SafeUrl(Text(Property(track, "external_urls"), "spotify"), "open.spotify.com"),
+            Number(track, "duration_ms") ?? 0, Flag(track, "explicit"), playableValue.ValueKind != JsonValueKind.False);
     }
     private static SpotifyDevice ParseDevice(JsonElement d) => new(Text(d, "id"), Text(d, "name", "Spotify device"),
         Flag(d, "is_active"), Flag(d, "is_restricted"), Flag(d, "supports_volume"), Number(d, "volume_percent"));
