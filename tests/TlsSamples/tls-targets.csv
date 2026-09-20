@@ -1,0 +1,6 @@
+host,expected_result,purpose
+badssl.com,Valid,Valid publicly trusted TLS certificate
+expired.badssl.com,Rejected,Expired certificate
+wrong.host.badssl.com,Rejected,Certificate hostname mismatch
+self-signed.badssl.com,Rejected,Self-signed certificate
+untrusted-root.badssl.com,Rejected,Certificate chain uses an untrusted root

@@ -60,9 +60,11 @@ builder.Services.AddSingleton<SpotifySessionStore>();
 builder.Services.AddHttpClient("Spotify", client => client.Timeout = TimeSpan.FromSeconds(15));
 builder.Services.AddScoped<SpotifyPlayerService>();
 var operations = builder.Configuration.GetSection("Operations").Get<OperationsSettings>() ?? new();
+var websiteAudit = builder.Configuration.GetSection("WebsiteAudit").Get<WebsiteAuditSettings>() ?? new();
 var alerts = builder.Configuration.GetSection("Alerts").Get<AlertSettings>() ?? new();
 var admin = builder.Configuration.GetSection("Admin").Get<AdminSettings>() ?? new();
 builder.Services.AddSingleton(operations);
+builder.Services.AddSingleton(websiteAudit);
 builder.Services.AddSingleton(alerts);
 builder.Services.AddSingleton(admin);
 var otlpEndpoint = Uri.TryCreate(builder.Configuration["Telemetry:OtlpEndpoint"], UriKind.Absolute, out var endpoint)
@@ -168,6 +170,10 @@ builder.Services.AddHttpClient("LoadTest", client => client.Timeout = TimeSpan.F
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddHttpClient("PublicLoadTest", client => client.Timeout = TimeSpan.FromSeconds(10))
     .ConfigurePrimaryHttpMessageHandler(() => PublicHttpTarget.CreateHandler(5));
+builder.Services.AddHttpClient("WebsiteAudit", client => client.Timeout = TimeSpan.FromSeconds(20))
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+builder.Services.AddHttpClient("PublicWebsiteAudit", client => client.Timeout = TimeSpan.FromSeconds(20))
+    .ConfigurePrimaryHttpMessageHandler(() => PublicHttpTarget.CreateHandler(6));
 builder.Services.AddHttpClient("Alerts", client => client.Timeout = TimeSpan.FromSeconds(5));
 builder.Services.AddSingleton<SystemMetricsService>();
 builder.Services.AddSingleton<ComputerInformationService>();
@@ -178,12 +184,16 @@ builder.Services.AddSingleton<TelemetryStore>();
 builder.Services.AddSingleton<AlertDeliveryService>();
 builder.Services.AddSingleton<NetworkDiagnosticsService>();
 builder.Services.AddSingleton<DiagnosticToolsService>();
+builder.Services.AddSingleton<WebsiteAuditService>();
+builder.Services.AddSingleton<BrowserWebsiteAuditService>();
+builder.Services.AddSingleton<WebsiteMonitorState>();
 builder.Services.AddSingleton<DeploymentInfoService>();
 builder.Services.AddSingleton<MaintenanceState>();
 builder.Services.AddSingleton<AdminAccessService>();
 builder.Services.AddSingleton<AdministrationService>();
 builder.Services.AddHostedService<MetricsCollector>();
 builder.Services.AddHostedService<WatchlistCollector>();
+builder.Services.AddHostedService<WebsiteMonitorService>();
 builder.Services.AddSingleton(new DiagnosticsSettings(
     builder.Configuration.GetValue<bool?>("Diagnostics:Enabled") ?? builder.Environment.IsDevelopment(),
     builder.Configuration["Diagnostics:FolderRoot"]));
@@ -208,6 +218,11 @@ app.UseRateLimiter();
 app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapHealthChecks("/healthz");
+app.MapGet("/website-audit/artifacts/{name}", (string name, BrowserWebsiteAuditService browser) =>
+{
+    var path = browser.GetArtifactPath(name);
+    return path is null ? Results.NotFound() : Results.File(path, "image/png");
+});
 app.MapGet("/healthz/details", () => Results.Ok(new
 {
     status = "Healthy",

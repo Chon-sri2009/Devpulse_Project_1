@@ -1,0 +1,48 @@
+DEVPULSE TLS CERTIFICATE MONITOR TEST
+=====================================
+
+The targets in tls-targets.csv are public TLS test endpoints operated by BadSSL.
+They contain no DevPulse credentials or private information.
+
+Valid-certificate test
+----------------------
+1. Start DevPulse and open /operations.
+2. In "One-off public target", enter:
+
+   badssl.com
+
+3. Select the permission checkbox.
+4. Select "Inspect target" under TLS Certificate Monitor.
+5. Expected result:
+   - A certificate subject is displayed.
+   - An expiry date is displayed.
+   - The certificate is reported as valid.
+   - Remaining days is greater than zero.
+
+Invalid-certificate tests
+-------------------------
+Repeat the test with each of these targets:
+
+   expired.badssl.com
+   wrong.host.badssl.com
+   self-signed.badssl.com
+   untrusted-root.badssl.com
+
+Expected result:
+- DevPulse rejects the TLS connection.
+- The result is not marked valid.
+- DevPulse displays "TLS connection failed" rather than trusting the certificate.
+
+Input notes
+-----------
+- You can enter only the host, such as badssl.com.
+- A complete URL such as https://badssl.com/ is also accepted; DevPulse extracts
+  the host and always inspects TLS on port 443.
+- A normal HTTP-only site without TLS should return a connection failure.
+- DNS, network, firewall, or hosting-provider restrictions can also cause a
+  connection failure. That does not necessarily mean the certificate is bad.
+
+Safety
+------
+Only inspect systems you own, public test services, or systems for which you
+have permission. Never use real private hostnames in a public DevPulse deployment.

@@ -16,4 +16,7 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.18.0" />
     <PackageReference Include="System.Management" Version="10.0.12" />
   </ItemGroup>
+  <ItemGroup>
+    <None Update="scripts/website-browser-audit.mjs" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

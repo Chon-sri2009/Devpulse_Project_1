@@ -1,0 +1,119 @@
+@page "/website-audit"
+@using MiniProject_Everything_1.Services
+@inject WebsiteAuditService Audits
+@inject BrowserWebsiteAuditService BrowserAudits
+@inject WebsiteMonitorState MonitorState
+@rendermode InteractiveServer
+@implements IDisposable
+<PageTitle>Website Audit | DevPulse</PageTitle>
+
+<div class="audit-page">
+    <header><p class="eyebrow">External quality assurance</p><h1>Website audit</h1><p>Crawl, validate, benchmark, and monitor a public website you are authorized to test.</p></header>
+    @if(error is not null){<p class="notice error" role="alert">@error</p>}
+    <section class="target-panel">
+        <label>Website URL <input class="form-control" type="url" @bind="target" @bind:event="oninput" placeholder="https://example.com/" /></label>
+        <label class="permission"><input type="checkbox" @bind="authorized" /> I own this website or have permission to audit it.</label>
+        <div class="actions">
+            <button class="action" disabled="@(busy || !authorized)" @onclick="RunHttpAudit">Run website audit</button>
+            <button class="action secondary" disabled="@(busy || !authorized || !BrowserAudits.Enabled)" @onclick="RunBrowserAudit">Run browser + Lighthouse</button>
+            <button class="action outline" disabled="@(busy || !authorized || !BrowserAudits.Enabled)" @onclick="UpdateBaseline">Save current visual baseline</button>
+        </div>
+        <small>The crawler is limited to configured safety caps. Browser audits run one at a time and may take up to two minutes.</small>
+    </section>
+
+    @if(busy){<p class="working" role="status">Audit running…</p>}
+
+    @if(report is not null)
+    {
+        <section class="summary-grid">
+            <div><span>Audit score</span><strong>@report.Score</strong></div>
+            <div><span>Resources</span><strong>@report.Resources.Count</strong></div>
+            <div><span>Broken</span><strong>@report.BrokenResources</strong></div>
+            <div><span>JSON files</span><strong>@report.JsonFiles</strong></div>
+            <div><span>Response</span><strong>@report.Performance.ResponseMs ms</strong></div>
+            <div><span>Transferred</span><strong>@FormatBytes(report.Performance.Bytes)</strong></div>
+        </section>
+        <section class="audit-grid">
+            <article class="audit-card"><h2>Performance and cache</h2>
+                <dl><dt>DNS lookup</dt><dd>@report.Performance.DnsMs ms</dd><dt>HTTP protocol</dt><dd>@report.Performance.Protocol</dd><dt>Cache-Control</dt><dd>@(Empty(report.Performance.CacheControl))</dd><dt>Compression</dt><dd>@(Empty(report.Performance.ContentEncoding))</dd></dl>
+            </article>
+            <article class="audit-card"><h2>Findings</h2>
+                @if(report.Findings.Count==0){<p class="good">No automated findings.</p>}else{<div class="finding-list">@foreach(var item in report.Findings){<div class="finding @item.Severity.ToLowerInvariant()"><strong>@item.Area · @item.Severity</strong><span>@item.Message</span>@if(item.Url is not null){<small>@item.Url</small>}</div>}</div>}
+            </article>
+            <article class="audit-card span-two"><h2>Crawled resources</h2>
+                <div class="resource-table"><div class="table-head"><span>Resource</span><span>Kind</span><span>Status</span><span>Time</span><span>Size</span></div>@foreach(var item in report.Resources){<div><span class="resource-url" title="@item.Url">@item.Url</span><span>@item.Kind</span><span class="@(item.Ok?"good":"bad")">@(item.Status==0?"Failed":item.Status)</span><span>@item.DurationMs ms</span><span>@FormatBytes(item.Bytes)</span></div>}</div>
+            </article>
+            <article class="audit-card span-two"><details><summary>Response headers (@report.Headers.Count)</summary><div class="headers">@foreach(var header in report.Headers){<code><strong>@header.Key:</strong> @header.Value</code>}</div></details></article>
+        </section>
+    }
+
+    @if(browser is not null)
+    {
+        <section class="browser-section">
+            <h2>Browser, Lighthouse, accessibility, and visual regression</h2>
+            @if(!browser.Success)
+            {
+                <p class="notice error">@browser.Error</p>
+            }
+            else
+            {
+                <div class="score-grid">
+                    @foreach(var score in browser.Scores)
+                    {
+                        <div><span>@score.Key</span><strong>@score.Value.ToString("F0")</strong></div>
+                    }
+                </div>
+                <div class="audit-grid">
+                    <article class="audit-card">
+                        <h3>Accessibility</h3>
+                        @if(browser.AccessibilityViolations.Count==0)
+                        {
+                            <p class="good">No automated axe violations.</p>
+                        }
+                        else
+                        {
+                            @foreach(var issue in browser.AccessibilityViolations)
+                            {
+                                <div class="finding warning"><strong>@issue.Impact · @issue.Id</strong><span>@issue.Description</span><small>@issue.Nodes affected node(s)</small></div>
+                            }
+                        }
+                    </article>
+                    <article class="audit-card">
+                        <h3>Synthetic journey</h3>
+                        <ul>@foreach(var step in browser.Journey){<li>@step</li>}</ul>
+                        @if(browser.ConsoleErrors.Count>0){<h4>Console errors</h4><ul class="bad">@foreach(var item in browser.ConsoleErrors){<li>@item</li>}</ul>}
+                        @if(browser.FailedRequests.Count>0){<h4>Failed requests</h4><ul class="bad">@foreach(var item in browser.FailedRequests){<li>@item</li>}</ul>}
+                    </article>
+                    <article class="audit-card span-two">
+                        <h3>Visual regression</h3>
+                        <p>Difference from desktop baseline: <strong>@browser.Visual.DifferencePercent.ToString("F3")%</strong>@if(browser.Visual.BaselineCreated){<span> · Baseline created</span>}@if(browser.Visual.BaselineUpdated){<span> · Baseline updated</span>}</p>
+                        <div class="screenshots">
+                            @if(browser.Visual.DesktopCurrent is not null){<figure><img src="@Artifact(browser.Visual.DesktopCurrent)" alt="Current desktop website screenshot" /><figcaption>Desktop current</figcaption></figure>}
+                            @if(browser.Visual.DesktopBaseline is not null){<figure><img src="@Artifact(browser.Visual.DesktopBaseline)" alt="Desktop visual baseline" /><figcaption>Desktop baseline</figcaption></figure>}
+                            @if(browser.Visual.DesktopDiff is not null){<figure><img src="@Artifact(browser.Visual.DesktopDiff)" alt="Desktop visual difference" /><figcaption>Pixel difference</figcaption></figure>}
+                            @if(browser.Visual.MobileCurrent is not null){<figure><img src="@Artifact(browser.Visual.MobileCurrent)" alt="Current mobile website screenshot" /><figcaption>Mobile current</figcaption></figure>}
+                        </div>
+                    </article>
+                </div>
+            }
+        </section>
+    }
+
+    <section class="monitor-section"><h2>Scheduled uptime monitoring</h2><p>Configured targets are checked in the background and create telemetry incidents when their state changes.</p>
+        @if(MonitorState.Snapshots.Count==0){<p class="muted">No monitoring result is available yet.</p>}else{<div class="monitor-list">@foreach(var item in MonitorState.Snapshots){<div><strong>@item.Url</strong><span class="@(item.Healthy?"good":"bad")">@item.Message · @item.DurationMs ms</span><small>@item.CheckedAt.LocalDateTime.ToString("g")</small></div>}</div>}
+    </section>
+</div>
+
+@code {
+    private readonly CancellationTokenSource cancellation=new();
+    private string target="";private bool authorized,busy;private string? error;private WebsiteAuditReport? report;private BrowserAuditReport? browser;
+    protected override void OnInitialized()=>target=Audits.DefaultUrl;
+    private async Task Run(Func<Task> action){if(busy)return;busy=true;error=null;try{await action();}catch(Exception ex)when(ex is not OperationCanceledException){error=ex.Message;}finally{busy=false;}}
+    private Task RunHttpAudit()=>Run(async()=>report=await Audits.AuditAsync(target,cancellation.Token));
+    private Task RunBrowserAudit()=>Run(async()=>browser=await BrowserAudits.RunAsync(target,false,cancellation.Token));
+    private Task UpdateBaseline()=>Run(async()=>browser=await BrowserAudits.RunAsync(target,true,cancellation.Token));
+    private static string Artifact(string name)=>$"/website-audit/artifacts/{Uri.EscapeDataString(name)}";
+    private static string Empty(string value)=>string.IsNullOrWhiteSpace(value)?"Not supplied":value;
+    private static string FormatBytes(long bytes)=>bytes switch{>=1048576=>$"{bytes/1048576d:F1} MB",>=1024=>$"{bytes/1024d:F1} KB",_=>$"{bytes} B"};
+    public void Dispose(){cancellation.Cancel();cancellation.Dispose();}
+}

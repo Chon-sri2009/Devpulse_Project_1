@@ -21,6 +21,7 @@ Diagnostics describe the machine running DevPulse. A hosted deployment reports i
 - **Operations:** owner-allowlisted service watchlist plus bounded one-off public-host ping, DNS, TLS, and database connectivity checks, with live log tailing.
 - **Telemetry:** persisted metric history, request traces, threshold incidents, deployment identity, and optional OTLP export.
 - **Inspectors:** public-URL JSON explorer, SHA-256 file hashing, password-based AES-256-GCM file encryption/decryption, local JWT decoding, and a bounded HTTP load tester.
+- **Website Audit:** bounded crawling, broken-link and asset checks, security/cache headers, response timing, JSON dataset validation, SEO checks, Lighthouse, axe accessibility, scripted browser journeys, desktop/mobile screenshots, visual regression, and scheduled uptime monitoring.
 - **Administration:** separate administrator cookie, process listing/termination, maintenance mode, audit history, and redacted diagnostics ZIP export.
 - **Alerts:** memory, disk, and request-latency thresholds with in-app incidents plus optional HTTPS webhook and SMTP delivery.
 - **Spotify:** protected OAuth/PKCE sessions, saved-album library and playback, Web Playback SDK browser audio, live progress, track/episode metadata, artwork, devices, seek/volume/playback controls, and rate-limit handling.
@@ -71,6 +72,13 @@ Use user-secrets for Development credentials, or double-underscore environment v
 | Operations__Databases__0__Name / Host / Port / Kind | empty | Database connectivity targets; Kind may be TCP or Redis |
 | Operations__WatchIntervalSeconds | 300 | Scheduled service-watchlist interval; set to 0 to disable |
 | Operations__LoadTestMaxRequests / LoadTestMaxConcurrency | 25 / 5 | Server-side load-test safety caps |
+| WebsiteAudit__DefaultUrl | configured project website | Initial URL shown on the Website Audit page |
+| WebsiteAudit__MonitoredUrls__0 | configured project website | Owner-approved URL for scheduled monitoring and browser audits |
+| WebsiteAudit__MonitorIntervalSeconds | 300 | Uptime interval; minimum 60 seconds, set to 0 to disable |
+| WebsiteAudit__MaxResources | 75 | Crawl cap, clamped between 10 and 150 resources |
+| WebsiteAudit__BrowserTimeoutSeconds | 120 | Lighthouse/browser-worker timeout, clamped to 30–300 seconds |
+| WebsiteAudit__BrowserEnabled | true | Enables the bounded Chromium worker when installed |
+| WebsiteAudit__NodePath / ChromiumPath | auto-detected | Optional explicit browser-worker executable paths |
 | Alerts__MemoryMb | 1024 | Process-memory warning threshold |
 | Alerts__DiskUsedPercent | 90 | Disk usage warning threshold |
 | Alerts__RequestLatencyMs | 2000 | Slow-request incident threshold |
@@ -102,6 +110,8 @@ The mini load tester accepts public HTTP or HTTPS URLs with the same network pro
 
 The Operations page accepts a one-off public domain, IP address, or URL for a single Ping, DNS resolution, or port-443 TLS inspection. It also accepts one public host and port for a TCP or Redis health check. Private and reserved destinations are blocked unless the exact target is owner-configured, and the UI requires a permission acknowledgment for active network checks. Scheduled checks and broad TCP scanning remain allowlisted.
 
+The Website Audit crawler accepts a public URL, pins public network destinations at connection time, disables redirects, and limits response sizes and crawl count. Browser-based audits are more powerful and therefore run only for origins configured under `WebsiteAudit:MonitoredUrls` or `WebsiteAudit:DefaultUrl`, one at a time. They run Lighthouse, axe, a bounded interaction journey, and desktop/mobile screenshot comparison. Visual baselines and current/difference images are stored under `Storage__DataPath/website-audit`.
+
 The file encryption tool creates authenticated `.devpulse` packages with AES-256-GCM and a key derived from the user's password. Use a unique password of at least 12 characters. The password is not stored, and a lost password cannot be recovered. SHA-256 remains available for integrity checking; hashes cannot be decrypted.
 
 For email alerts, configure `Alerts__Smtp__Host`, `Port`, `Username`, `Password`, `From`, `To`, and `EnableSsl` through secrets/environment settings. Webhook alerts accept HTTPS only. Redis health sends an unauthenticated `PING`; other database kinds verify TCP acceptance without running queries or exposing credentials.
@@ -116,6 +126,8 @@ docker run --rm -p 10000:10000 -v devpulse-data:/app/data devpulse
 ```
 
 Use the repository Dockerfile, port 10000 and health check /healthz on Render. The image runs as the non-root app user. The platform terminates HTTPS. Configure its trusted proxy addresses/networks so OAuth receives the correct HTTPS scheme; do not trust every network indiscriminately. Register the public HTTPS callback in Spotify.
+
+The production image includes Node.js and headless Chromium for Website Audit. This materially increases image size and memory use. If the hosting plan cannot support Chromium, set `WebsiteAudit__BrowserEnabled=false`; crawling, links, headers, JSON, SEO, timing, cache, and uptime checks continue to work without it.
 
 For file-based production secrets on Render, create a Secret File named `devpulse-secrets.json`, set `DEVPULSE_SECRETS_FILE=/etc/secrets/devpulse-secrets.json`, and keep that file out of the repository and Docker image. The container user belongs to Render's secret-file group.
 

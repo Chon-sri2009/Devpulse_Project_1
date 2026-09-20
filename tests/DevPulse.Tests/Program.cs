@@ -407,6 +407,44 @@ var tests = new List<(string Name, Func<Task> Run)>
         var tools = new DiagnosticToolsService(options, new TestHttpFactory(_ => JsonResponse("{\"source\":\"approved\"}")));
         Check((await tools.FetchJsonAsync(options.ApprovedUrls[0], default)).Contains("approved"));
     }),
+    ("Website audit crawls assets and validates JSON, headers, and links", async () =>
+    {
+        var factory = new TestHttpFactory(request =>
+        {
+            var path = request.RequestUri!.AbsolutePath;
+            HttpResponseMessage response = path switch
+            {
+                "/" => new(HttpStatusCode.OK) { Content = new StringContent("""<!doctype html><html lang="en"><head><title>Example audit website</title><meta name="description" content="Audit fixture"><meta name="viewport" content="width=device-width"><script src="/app.js"></script></head><body><h1>Example</h1><img src="/missing.png" alt="Missing fixture"></body></html>""", System.Text.Encoding.UTF8, "text/html") },
+                "/app.js" => new(HttpStatusCode.OK) { Content = new StringContent("fetch('/data.json')", System.Text.Encoding.UTF8, "application/javascript") },
+                "/data.json" => JsonResponse("[{\"id\":1,\"name\":\"One\",\"category\":\"mcu\",\"description\":\"A\",\"processor\":\"P\"},{\"id\":1}]") ,
+                "/missing.png" => new(HttpStatusCode.NotFound),
+                "/robots.txt" => new(HttpStatusCode.OK) { Content = new StringContent("User-agent: *") },
+                "/sitemap.xml" => new(HttpStatusCode.OK) { Content = new StringContent("<urlset></urlset>", System.Text.Encoding.UTF8, "application/xml") },
+                _ => new(HttpStatusCode.NotFound)
+            };
+            if (path == "/") response.Headers.TryAddWithoutValidation("Strict-Transport-Security", "max-age=31536000");
+            return response;
+        });
+        var audit = new WebsiteAuditService(factory, new(), new() { MaxResources = 30 });
+        var result = await audit.AuditAsync("https://93.184.216.34/", default);
+        Check(result.Resources.Any(x => x.Kind == "JSON") && result.BrokenResources == 1);
+        Check(result.Findings.Any(x => x.Area == "JSON" && x.Message.Contains("Duplicate")));
+        Check(result.Findings.Any(x => x.Area == "Security" && x.Message.Contains("Content-Security-Policy")));
+    }),
+    ("Website uptime monitor reports a successful public response", async () =>
+    {
+        var audit = new WebsiteAuditService(new TestHttpFactory(_ => new(HttpStatusCode.NoContent)), new(), new());
+        var result = await audit.CheckUptimeAsync("https://93.184.216.34/health", default);
+        Check(result.Healthy && result.Status == 204 && result.Message == "Available");
+    }),
+    ("Website audit blocks an unapproved private origin", async () =>
+    {
+        var count = 0;
+        var audit = new WebsiteAuditService(new TestHttpFactory(_ => { count++; return new(HttpStatusCode.OK); }), new(), new());
+        try { await audit.AuditAsync("http://127.0.0.1/", default); }
+        catch (InvalidOperationException) { Check(count == 0); return; }
+        throw new InvalidOperationException("Expected private website audit rejection");
+    }),
     ("Load tester accepts an arbitrary public URL with bounded requests", async () =>
     {
         var count = 0; string? requested = null;

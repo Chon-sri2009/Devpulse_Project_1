@@ -68,7 +68,8 @@ public sealed class DiagnosticsGuardMiddleware(RequestDelegate next)
     public async Task InvokeAsync(HttpContext context, DiagnosticsSettings settings)
     {
         var restricted = context.Request.Path.StartsWithSegments("/operations")
-            || context.Request.Path.StartsWithSegments("/telemetry") || context.Request.Path.StartsWithSegments("/tools");
+            || context.Request.Path.StartsWithSegments("/telemetry") || context.Request.Path.StartsWithSegments("/tools")
+            || context.Request.Path.StartsWithSegments("/website-audit");
         if (!settings.Enabled && restricted)
         { context.Response.StatusCode = StatusCodes.Status404NotFound; await context.Response.WriteAsync("Diagnostics are disabled."); return; }
         await next(context);

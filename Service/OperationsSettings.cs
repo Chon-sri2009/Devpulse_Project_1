@@ -12,6 +12,18 @@ public sealed class OperationsSettings
     public int WatchIntervalSeconds { get; set; } = 300;
 }
 
+public sealed class WebsiteAuditSettings
+{
+    public string? DefaultUrl { get; set; }
+    public string[] MonitoredUrls { get; set; } = [];
+    public int MonitorIntervalSeconds { get; set; } = 300;
+    public int MaxResources { get; set; } = 75;
+    public int BrowserTimeoutSeconds { get; set; } = 120;
+    public bool BrowserEnabled { get; set; } = true;
+    public string? NodePath { get; set; }
+    public string? ChromiumPath { get; set; }
+}
+
 public sealed class DatabaseTarget
 {
     public string Name { get; set; } = "Database";
