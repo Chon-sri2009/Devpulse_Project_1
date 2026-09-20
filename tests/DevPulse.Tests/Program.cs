@@ -118,6 +118,17 @@ var tests = new List<(string Name, Func<Task> Run)>
         Check(page.Items.Count == 1 && page.Items[0].Name == "Album" && page.Items[0].Artists == "Artist");
         Check(page.HasPrevious && !page.HasNext && page.Items[0].Image == "https://i.scdn.co/image/cover");
     }),
+    ("Created, private, and collaborative playlists are paged and parsed safely", async () =>
+    {
+        using var fixture = new SpotifyFixture(); var user = await fixture.Login();
+        fixture.Replies.Enqueue(_ => JsonResponse("""{"offset":0,"limit":12,"total":2,"items":[{"name":"My Mix","uri":"spotify:playlist:ABC123","owner":{"display_name":"Owner"},"images":[{"url":"https://mosaic.scdn.co/640/cover"}],"tracks":{"total":24},"public":false,"collaborative":true},{"name":"Unsafe","uri":"javascript:alert(1)"}]}"""));
+        var result = await fixture.Player.GetPlaylistsAsync(user, 0, 12, default);
+        var page = SpotifyPlayback.ParsePlaylists(result.Data!.Value);
+        Check(result.Success && fixture.Requests[0].Uri.EndsWith("me/playlists?limit=12&offset=0"));
+        Check(page.Items.Count == 1 && page.Items[0].Name == "My Mix" && page.Items[0].Owner == "Owner");
+        Check(page.Items[0].Tracks == 24 && page.Items[0].Public == false && page.Items[0].Collaborative);
+        Check(page.Items[0].Image == "https://mosaic.scdn.co/640/cover");
+    }),
     ("Album playback accepts only Spotify album URIs", async () =>
     {
         using var fixture = new SpotifyFixture(); var user = await fixture.Login();
@@ -128,6 +139,17 @@ var tests = new List<(string Name, Func<Task> Run)>
         Check(fixture.Requests[0].Uri.EndsWith("me/player/play?device_id=device%26other%3Dvalue"));
         using var body = JsonDocument.Parse(fixture.Requests[0].Body);
         Check(body.RootElement.GetProperty("context_uri").GetString() == "spotify:album:ABC123");
+    }),
+    ("Playlist playback accepts only Spotify playlist URIs", async () =>
+    {
+        using var fixture = new SpotifyFixture(); var user = await fixture.Login();
+        Check((await fixture.Player.PlayPlaylistAsync(user, "https://attacker.example/playlist", "phone", default)).Status == 400);
+        Check(fixture.Requests.Count == 0);
+        fixture.Replies.Enqueue(_ => new(HttpStatusCode.NoContent));
+        Check((await fixture.Player.PlayPlaylistAsync(user, "spotify:playlist:ABC123", "phone&other=value", default)).Success);
+        Check(fixture.Requests[0].Uri.EndsWith("me/player/play?device_id=phone%26other%3Dvalue"));
+        using var body = JsonDocument.Parse(fixture.Requests[0].Body);
+        Check(body.RootElement.GetProperty("context_uri").GetString() == "spotify:playlist:ABC123");
     }),
     ("Spotify 204 means idle player", async () =>
     {
@@ -199,6 +221,7 @@ var tests = new List<(string Name, Func<Task> Run)>
         Check(fixture.Requests[5].Uri.Contains("position_ms=42"));
         using var body = JsonDocument.Parse(fixture.Requests[6].Body);
         Check(body.RootElement.GetProperty("device_ids")[0].GetString() == "device&other=value");
+        Check(!body.RootElement.GetProperty("play").GetBoolean());
         using var playBody = JsonDocument.Parse(fixture.Requests[7].Body);
         Check(playBody.RootElement.GetProperty("play").GetBoolean());
     }),

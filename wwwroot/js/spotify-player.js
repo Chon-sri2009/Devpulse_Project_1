@@ -4,7 +4,6 @@ let dotNetReference;
 let browserDeviceId = "";
 let cachedToken;
 let tokenExpiresAt = 0;
-let activationButton;
 
 function loadSdk() {
     if (window.Spotify?.Player) return Promise.resolve();
@@ -84,15 +83,11 @@ function reportError(kind, error) {
     notify("OnBrowserPlayerError", { kind, message: error?.message || "Spotify browser playback failed." });
 }
 
-function activateFromUserGesture() {
-    if (player) void player.activateElement().catch(error => reportError("autoplay", error));
-}
-
 function visibilityChanged() {
     notify("OnSpotifyVisibilityChanged", !document.hidden);
 }
 
-export async function initialize(reference, activationButtonId) {
+export async function initialize(reference) {
     if (player) return true;
     dotNetReference = reference;
 
@@ -127,8 +122,6 @@ export async function initialize(reference, activationButtonId) {
         player.addListener("playback_error", error => reportError("playback", error));
         player.addListener("autoplay_failed", () => reportError("autoplay", { message: "Your browser blocked automatic playback. Select Play in this browser again." }));
 
-        activationButton = document.getElementById(activationButtonId);
-        activationButton?.addEventListener("click", activateFromUserGesture, true);
         document.addEventListener("visibilitychange", visibilityChanged);
 
         const connected = await player.connect();
@@ -138,6 +131,12 @@ export async function initialize(reference, activationButtonId) {
         reportError("initialization", error);
         return false;
     }
+}
+
+export async function activate() {
+    if (!player) return false;
+    await player.activateElement();
+    return true;
 }
 
 export async function setVolume(percent) {
@@ -153,7 +152,6 @@ export async function seek(positionMs) {
 }
 
 export async function disconnect() {
-    activationButton?.removeEventListener("click", activateFromUserGesture, true);
     document.removeEventListener("visibilitychange", visibilityChanged);
     if (player) player.disconnect();
     player = undefined;

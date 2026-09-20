@@ -25,7 +25,7 @@ Diagnostics describe the machine running DevPulse. A hosted deployment reports i
 - **Website Audit:** bounded crawling, broken-link and asset checks, security/cache headers, response timing, JSON dataset validation, SEO checks, Lighthouse, axe accessibility, scripted browser journeys, desktop/mobile screenshots, visual regression, and scheduled uptime monitoring.
 - **Administration:** separate administrator cookie, process listing/termination, maintenance mode, audit history, and redacted diagnostics ZIP export.
 - **Alerts:** memory, disk, and request-latency thresholds with in-app incidents plus optional HTTPS webhook and SMTP delivery.
-- **Spotify:** protected OAuth/PKCE sessions, saved-album library and playback, Web Playback SDK browser audio, live progress, track/episode metadata, artwork, devices, seek/volume/playback controls, and rate-limit handling.
+- **Spotify:** protected OAuth/PKCE sessions, saved albums, created/followed/private/collaborative playlists, device-first Spotify Connect control, optional Web Playback SDK browser audio, live progress, metadata, artwork, seek/volume controls, and rate-limit handling.
 - Health endpoint, diagnostics production gate, friendly error/404 pages, persistent encrypted sessions, CI, and production smoke tests.
 
 ## Spotify setup
@@ -45,7 +45,7 @@ dotnet user-secrets set "Spotify:ClientSecret" "YOUR_CLIENT_SECRET"
 
 Restart, open /spotify, and connect. Playback controls and browser audio require Spotify Premium. Development-mode apps may require allowed users in the developer dashboard; consult Spotify's current restrictions. Some external devices do not support volume control.
 
-The page can browse the signed-in user's saved albums and play one on the selected device. It can control existing Spotify Connect devices or create a `DevPulse Web Player` that plays audio in the browser. Select **Play in this browser** to activate and transfer playback. Browser playback uses SDK state events; the progress display updates locally every second and reconciles with Spotify every four seconds while the tab is visible. External-device changes are near-real-time because Spotify does not provide playback webhooks. Existing users must disconnect and reconnect once after this upgrade to grant the `streaming`, `user-read-email`, and `user-library-read` scopes.
+The page follows the active Spotify Connect device by default, so opening or closing DevPulse does not take playback away from the Spotify desktop or mobile app. Choose another device and select **Continue on this device** to transfer while preserving the current playing/paused state. Browser audio is opt-in: first select **Enable browser audio**, then **Play in this browser**. The page can browse saved albums and the user's created, followed, private, and collaborative playlists. Progress updates locally every second and reconciles with Spotify every four seconds while the tab is visible. External-device changes are near-real-time because Spotify does not provide playback webhooks. Existing users must disconnect and reconnect once after this upgrade to grant the `playlist-read-private` and `playlist-read-collaborative` scopes in addition to the existing playback and library scopes.
 
 Tokens are encrypted on the server; the cookie contains only an opaque session ID. Sessions last at most seven days. Disconnect invalidates the app session, including other open tabs. To revoke the OAuth grant completely, remove DevPulse from Spotify account Apps settings.
 
@@ -159,7 +159,7 @@ GitHub Actions runs build, regression checks, formatting, smoke checks and publi
 5. Configure a unique administrator password and test privileged actions behind HTTPS; enable process termination only if you explicitly need it.
 6. Review every operations allowlist, log path, database target, and alert destination.
 7. Optionally configure an OTLP collector and SMTP/webhook alerts.
-8. Test real Spotify login, saved-album paging/playback, external-device control, and **Play in this browser** using a Premium account.
+8. Test real Spotify login, saved-album and playlist paging/playback, seamless external-device transfer, and optional browser audio using a Premium account.
 
 ## References
 

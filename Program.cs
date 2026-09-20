@@ -133,6 +133,8 @@ if (spotify.IsConfigured)
         options.Scope.Add("user-read-private");
         options.Scope.Add("user-read-email");
         options.Scope.Add("user-library-read");
+        options.Scope.Add("playlist-read-private");
+        options.Scope.Add("playlist-read-collaborative");
         options.Scope.Add("user-read-playback-state");
         options.Scope.Add("user-read-currently-playing");
         options.Scope.Add("user-modify-playback-state");

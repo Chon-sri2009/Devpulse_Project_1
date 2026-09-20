@@ -17,6 +17,20 @@ public sealed record SpotifyAlbumPage(IReadOnlyList<SpotifyAlbum> Items, int Off
     public bool HasPrevious => Offset > 0;
     public bool HasNext => Offset + Items.Count < Total;
 }
+public sealed record SpotifyPlaylist(string Uri, string Name, string Owner, string? Image, int Tracks, bool? Public, bool Collaborative)
+{
+    public static bool IsSafeUri(string? value)
+    {
+        const string prefix = "spotify:playlist:";
+        return value is { Length: > 17 } && value.StartsWith(prefix, StringComparison.Ordinal)
+            && value[prefix.Length..].All(char.IsAsciiLetterOrDigit);
+    }
+}
+public sealed record SpotifyPlaylistPage(IReadOnlyList<SpotifyPlaylist> Items, int Offset, int Limit, int Total)
+{
+    public bool HasPrevious => Offset > 0;
+    public bool HasNext => Offset + Items.Count < Total;
+}
 public sealed record SpotifyPlayback(string Title, string Creator, string? Image, string? Link,
     bool Playing, int ProgressMs, int DurationMs, SpotifyDevice? Device, IReadOnlySet<string> Disallowed)
 {
@@ -74,6 +88,36 @@ public sealed record SpotifyPlayback(string Title, string Creator, string? Image
         return new(albums, Number(json, "offset") ?? 0, Number(json, "limit") ?? albums.Count,
             Number(json, "total") ?? albums.Count);
     }
+    public static SpotifyPlaylistPage ParsePlaylists(JsonElement json)
+    {
+        var items = Property(json, "items");
+        var playlists = new List<SpotifyPlaylist>();
+        if (items.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var playlist in items.EnumerateArray())
+            {
+                var uri = Text(playlist, "uri");
+                if (!SpotifyPlaylist.IsSafeUri(uri)) continue;
+                var images = Property(playlist, "images");
+                var image = images.ValueKind == JsonValueKind.Array && images.GetArrayLength() > 0
+                    ? SafeSpotifyImage(Text(images[0], "url")) : null;
+                var trackContainer = Property(playlist, "tracks");
+                if (trackContainer.ValueKind != JsonValueKind.Object) trackContainer = Property(playlist, "items");
+                var publicValue = Property(playlist, "public");
+                bool? isPublic = publicValue.ValueKind switch
+                {
+                    JsonValueKind.True => true,
+                    JsonValueKind.False => false,
+                    _ => null
+                };
+                playlists.Add(new(uri, Text(playlist, "name", "Untitled playlist"),
+                    Text(Property(playlist, "owner"), "display_name", "Spotify user"), image,
+                    Number(trackContainer, "total") ?? 0, isPublic, Flag(playlist, "collaborative")));
+            }
+        }
+        return new(playlists, Number(json, "offset") ?? 0, Number(json, "limit") ?? playlists.Count,
+            Number(json, "total") ?? playlists.Count);
+    }
     private static SpotifyDevice ParseDevice(JsonElement d) => new(Text(d, "id"), Text(d, "name", "Spotify device"),
         Flag(d, "is_active"), Flag(d, "is_restricted"), Flag(d, "supports_volume"), Number(d, "volume_percent"));
     private static JsonElement Property(JsonElement j, string key) =>
@@ -85,4 +129,8 @@ public sealed record SpotifyPlayback(string Title, string Creator, string? Image
     private static bool Flag(JsonElement j, string key) => Property(j, key).ValueKind == JsonValueKind.True;
     private static string? SafeUrl(string? value, string host) =>
         Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.Scheme == "https" && uri.Host == host ? value : null;
+    private static string? SafeSpotifyImage(string? value) =>
+        Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.Scheme == "https"
+        && (uri.Host == "i.scdn.co" || uri.Host.EndsWith(".scdn.co", StringComparison.OrdinalIgnoreCase)
+            || uri.Host.EndsWith(".spotifycdn.com", StringComparison.OrdinalIgnoreCase)) ? value : null;
 }
