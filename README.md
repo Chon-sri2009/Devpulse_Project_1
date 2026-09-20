@@ -21,6 +21,7 @@ Diagnostics describe the machine running DevPulse. A hosted deployment reports i
 - **Operations:** owner-allowlisted service watchlist plus bounded one-off public-host ping, DNS, TLS, and database connectivity checks, with live log tailing.
 - **Telemetry:** persisted metric history, request traces, threshold incidents, deployment identity, and optional OTLP export.
 - **Inspectors:** public-URL JSON explorer, SHA-256 file hashing, password-based AES-256-GCM file encryption/decryption, local JWT decoding, and a bounded HTTP load tester.
+- **Network Calculator:** IPv4 and IPv6 subnet planning, usable address ranges, CIDR/mask/wildcard conversion, VLSM allocation, route summarization, DHCP/firewall range counts, transfer-time and bandwidth-delay estimates, and MTU/MSS sizing.
 - **Website Audit:** bounded crawling, broken-link and asset checks, security/cache headers, response timing, JSON dataset validation, SEO checks, Lighthouse, axe accessibility, scripted browser journeys, desktop/mobile screenshots, visual regression, and scheduled uptime monitoring.
 - **Administration:** separate administrator cookie, process listing/termination, maintenance mode, audit history, and redacted diagnostics ZIP export.
 - **Alerts:** memory, disk, and request-latency thresholds with in-app incidents plus optional HTTPS webhook and SMTP delivery.

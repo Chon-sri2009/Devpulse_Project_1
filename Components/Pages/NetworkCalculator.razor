@@ -1,0 +1,193 @@
+@page "/network-calculator"
+@using MiniProject_Everything_1.Services
+@rendermode InteractiveServer
+
+<PageTitle>Network Calculator | DevPulse</PageTitle>
+
+<div class="network-page">
+    <header>
+        <p class="eyebrow">Network planning toolkit</p>
+        <h1>Network calculator</h1>
+        <p>Plan subnets and server networks without doing binary arithmetic by hand. Calculations run locally in your DevPulse session and do not contact any target.</p>
+    </header>
+
+    @if (error is not null)
+    {
+        <div class="notice" role="alert"><strong>Could not calculate</strong><span>@error</span></div>
+    }
+
+    <nav class="jump-links" aria-label="Calculator sections">
+        <a href="#ipv4">IPv4 subnet</a><a href="#vlsm">VLSM planner</a><a href="#ipv6">IPv6 prefix</a>
+        <a href="#routes">Routes & ranges</a><a href="#transfer">Bandwidth</a><a href="#mtu">MTU & MSS</a>
+    </nav>
+
+    <section class="calculator-card featured" id="ipv4">
+        <div class="section-heading"><div><span class="step">01</span><h2>IPv4 subnet calculator</h2><p>Get the network, broadcast, mask, wildcard, host capacity, and usable server range.</p></div></div>
+        <div class="input-row ipv4-inputs">
+            <label>IPv4 address<input class="form-control" @bind="ipv4Address" placeholder="192.168.10.25" /></label>
+            <label>CIDR prefix<input class="form-control" type="number" min="0" max="32" @bind="ipv4Prefix" /></label>
+            <button class="action" @onclick="CalculateIpv4">Calculate subnet</button>
+        </div>
+        @if (ipv4 is not null)
+        {
+            <div class="hero-result">
+                <div><span>Network</span><strong>@ipv4.Network/@ipv4.Prefix</strong></div>
+                <div><span>Usable range</span><strong>@ipv4.FirstUsable – @ipv4.LastUsable</strong><small>@ipv4.RangeNote</small></div>
+                <div><span>Usable hosts</span><strong>@ipv4.UsableHosts.ToString("N0")</strong></div>
+            </div>
+            <dl class="result-grid">
+                <div><dt>Subnet mask</dt><dd>@ipv4.SubnetMask</dd></div><div><dt>Wildcard mask</dt><dd>@ipv4.WildcardMask</dd></div>
+                <div><dt>Broadcast</dt><dd>@ipv4.Broadcast</dd></div><div><dt>Total addresses</dt><dd>@ipv4.TotalAddresses.ToString("N0")</dd></div>
+                <div><dt>Address type</dt><dd>@ipv4.AddressType</dd></div><div><dt>Host number</dt><dd>@ipv4.HostNumber.ToString("N0")</dd></div>
+                <div><dt>Previous subnet</dt><dd>@(ipv4.PreviousSubnet ?? "None")</dd></div><div><dt>Next subnet</dt><dd>@(ipv4.NextSubnet ?? "None")</dd></div>
+                <div class="wide"><dt>Binary address</dt><dd><code>@ipv4.BinaryAddress</code></dd></div>
+                <div class="wide"><dt>Binary mask</dt><dd><code>@ipv4.BinaryMask</code></dd></div>
+                <div><dt>Hexadecimal</dt><dd>@ipv4.Hexadecimal</dd></div><div><dt>Reverse DNS</dt><dd>@ipv4.ReverseDns</dd></div>
+            </dl>
+        }
+        <div class="inline-tool">
+            <div><h3>Mask and wildcard converter</h3><p>Enter <code>/24</code>, <code>24</code>, or <code>255.255.255.0</code>.</p></div>
+            <div class="compact-controls"><input class="form-control" @bind="maskInput" placeholder="/24" /><button class="action secondary" @onclick="ConvertMask">Convert</button></div>
+            @if (mask is not null)
+            {
+                <div class="compact-result"><span><small>CIDR</small><strong>/@mask.Prefix</strong></span><span><small>Mask</small><strong>@mask.SubnetMask</strong></span><span><small>Wildcard</small><strong>@mask.WildcardMask</strong></span><span><small>Addresses</small><strong>@mask.TotalAddresses.ToString("N0")</strong></span></div>
+            }
+        </div>
+    </section>
+
+    <section class="calculator-card" id="vlsm">
+        <div class="section-heading"><div><span class="step">02</span><h2>VLSM subnet planner</h2><p>Divide a parent network into correctly sized subnets. Largest requirements are allocated first to reduce waste.</p></div></div>
+        <div class="vlsm-controls">
+            <label>Parent network<input class="form-control" @bind="vlsmParent" placeholder="10.10.0.0/24" /></label>
+            <label>Requirements — one per line<textarea class="form-control" @bind="vlsmRequirements" rows="5" placeholder="Web servers, 50&#10;Database, 20&#10;Management, 10"></textarea><small>Format: name, usable hosts</small></label>
+            <button class="action" @onclick="PlanVlsm">Build allocation plan</button>
+        </div>
+        @if (vlsm.Count > 0)
+        {
+            <div class="table-scroll"><table><thead><tr><th>Name</th><th>Needed</th><th>Allocated CIDR</th><th>Mask</th><th>Usable range</th><th>Broadcast</th><th>Capacity</th></tr></thead>
+                <tbody>@foreach (var item in vlsm){<tr><td><strong>@item.Name</strong></td><td>@item.RequestedHosts</td><td><code>@item.Cidr</code></td><td>@NetworkCalculatorService.ConvertMask(item.Prefix.ToString()).SubnetMask</td><td>@item.FirstUsable – @item.LastUsable</td><td>@item.Broadcast</td><td>@item.Capacity.ToString("N0")</td></tr>}</tbody>
+            </table></div>
+        }
+    </section>
+
+    <section class="calculator-card" id="ipv6">
+        <div class="section-heading"><div><span class="step">03</span><h2>IPv6 prefix calculator</h2><p>Normalize an IPv6 address and calculate its prefix network, final address, type, and reverse-DNS form.</p></div></div>
+        <div class="input-row ipv6-inputs">
+            <label>IPv6 address<input class="form-control" @bind="ipv6Address" placeholder="2001:db8:10::25" /></label>
+            <label>Prefix<input class="form-control" type="number" min="0" max="128" @bind="ipv6Prefix" /></label>
+            <button class="action" @onclick="CalculateIpv6">Calculate prefix</button>
+        </div>
+        @if (ipv6 is not null)
+        {
+            <dl class="result-grid">
+                <div><dt>Compressed</dt><dd>@ipv6.CompressedAddress</dd></div><div><dt>Type</dt><dd>@ipv6.AddressType</dd></div>
+                <div class="wide"><dt>Expanded</dt><dd><code>@ipv6.ExpandedAddress</code></dd></div>
+                <div><dt>Network</dt><dd>@ipv6.Network/@ipv6.Prefix</dd></div><div><dt>Last address</dt><dd>@ipv6.LastAddress</dd></div>
+                <div class="wide"><dt>Addresses in prefix</dt><dd>@ipv6.TotalAddresses</dd></div>
+                <div class="wide"><dt>Reverse DNS</dt><dd class="break-all">@ipv6.ReverseDns</dd></div>
+            </dl>
+        }
+    </section>
+
+    <div class="two-column" id="routes">
+        <section class="calculator-card">
+            <div class="section-heading"><div><span class="step">04</span><h2>Route summarizer</h2><p>Find the smallest single CIDR route that covers a list of IPv4 addresses or networks.</p></div></div>
+            <label>Addresses or CIDRs<textarea class="form-control" rows="5" @bind="summaryInputs" placeholder="10.20.0.0/24&#10;10.20.1.0/24"></textarea></label>
+            <button class="action" @onclick="SummarizeRoutes">Summarize routes</button>
+            @if (summary is not null)
+            {
+                <div class="primary-answer"><small>Covering route</small><strong>@summary.Cidr</strong></div>
+                <dl class="mini-grid"><div><dt>Range</dt><dd>@summary.Network – @summary.Broadcast</dd></div><div><dt>Covered</dt><dd>@summary.CoveredAddresses.ToString("N0") addresses</dd></div><div><dt>Extra coverage</dt><dd>@summary.AdditionalAddresses.ToString("N0") addresses</dd></div></dl>
+            }
+        </section>
+        <section class="calculator-card">
+            <div class="section-heading"><div><span class="step">05</span><h2>IP range calculator</h2><p>Count an inclusive DHCP or firewall address range and detect whether it is one exact CIDR block.</p></div></div>
+            <div class="stacked-controls"><label>First address<input class="form-control" @bind="rangeStart" /></label><label>Last address<input class="form-control" @bind="rangeEnd" /></label></div>
+            <button class="action" @onclick="CalculateRange">Count addresses</button>
+            @if (range is not null)
+            {
+                <div class="primary-answer"><small>Inclusive range size</small><strong>@range.Count.ToString("N0")</strong><span>@(range.ExactCidr is null ? "This range is not one exact CIDR block." : $"Exact block: {range.ExactCidr}")</span></div>
+            }
+        </section>
+    </div>
+
+    <div class="two-column">
+        <section class="calculator-card" id="transfer">
+            <div class="section-heading"><div><span class="step">06</span><h2>Transfer time & bandwidth-delay product</h2><p>Estimate file transfer time and the TCP window needed to fill a link.</p></div></div>
+            <div class="number-grid">
+                <label>Data<input class="form-control" type="number" min="0.01" step="any" @bind="dataAmount" /></label>
+                <label>Unit<select class="form-select" @bind="dataUnit"><option>MB</option><option>GB</option><option>TB</option><option>MiB</option><option>GiB</option><option>TiB</option></select></label>
+                <label>Link speed<input class="form-control" type="number" min="0.01" step="any" @bind="linkSpeed" /></label>
+                <label>Unit<select class="form-select" @bind="speedUnit"><option>Mbps</option><option>Gbps</option><option>Kbps</option><option>Tbps</option></select></label>
+                <label>Overhead %<input class="form-control" type="number" min="0" max="99" step="0.1" @bind="overhead" /></label>
+                <label>RTT ms<input class="form-control" type="number" min="0" step="0.1" @bind="rtt" /></label>
+            </div>
+            <button class="action" @onclick="CalculateTransfer">Estimate transfer</button>
+            @if (transfer is not null)
+            {
+                <div class="compact-result three"><span><small>Transfer time</small><strong>@transfer.FriendlyDuration</strong></span><span><small>Effective speed</small><strong>@((transfer.EffectiveBitsPerSecond / 1_000_000).ToString("N2")) Mbps</strong></span><span><small>Minimum TCP window</small><strong>@transfer.BandwidthDelayProductKiB.ToString("N1") KiB</strong></span></div>
+            }
+        </section>
+        <section class="calculator-card" id="mtu">
+            <div class="section-heading"><div><span class="step">07</span><h2>MTU, MSS & payload calculator</h2><p>Calculate maximum TCP and UDP payload sizes for a virtual NIC or tunnel.</p></div></div>
+            <div class="number-grid mtu-grid">
+                <label>MTU bytes<input class="form-control" type="number" min="68" max="65535" @bind="mtuValue" /></label>
+                <label>IP version<select class="form-select" @bind="mtuIpVersion"><option value="4">IPv4</option><option value="6">IPv6</option></select></label>
+                <label>TCP option bytes<input class="form-control" type="number" min="0" max="40" step="4" @bind="tcpOptions" /></label>
+            </div>
+            <button class="action" @onclick="CalculateMtu">Calculate payloads</button>
+            @if (mtu is not null)
+            {
+                <div class="compact-result three"><span><small>TCP MSS</small><strong>@mtu.TcpMss bytes</strong></span><span><small>UDP payload</small><strong>@mtu.UdpPayload bytes</strong></span><span><small>Ethernet frame</small><strong>@mtu.EthernetFrameBytes bytes</strong></span></div>
+                <p class="footnote">Ethernet frame includes the 14-byte header and 4-byte FCS, but not the preamble or inter-packet gap.</p>
+            }
+        </section>
+    </div>
+
+    <aside class="reference-note"><strong>Planning note</strong><span>These results help design networks, but your cloud provider may reserve additional addresses. For example, check the provider's subnet documentation before finalizing DHCP pools or capacity.</span></aside>
+</div>
+
+@code {
+    private string? error;
+    private string ipv4Address = "192.168.10.25", maskInput = "/24", ipv6Address = "2001:db8:10::25";
+    private string vlsmParent = "10.10.0.0/24", vlsmRequirements = "Web servers, 50\nDatabase, 20\nManagement, 10";
+    private string summaryInputs = "10.20.0.0/24\n10.20.1.0/24", rangeStart = "192.168.1.50", rangeEnd = "192.168.1.199";
+    private int ipv4Prefix = 24, ipv6Prefix = 64, mtuValue = 1500, mtuIpVersion = 4, tcpOptions;
+    private double dataAmount = 10, linkSpeed = 100, overhead = 3, rtt = 25;
+    private string dataUnit = "GB", speedUnit = "Mbps";
+    private Ipv4SubnetResult? ipv4;
+    private MaskConversionResult? mask;
+    private Ipv6PrefixResult? ipv6;
+    private RouteSummaryResult? summary;
+    private AddressRangeResult? range;
+    private IReadOnlyList<VlsmAllocation> vlsm = [];
+    private TransferCalculation? transfer;
+    private MtuCalculation? mtu;
+
+    protected override void OnInitialized()
+    {
+        CalculateIpv4(); ConvertMask(); CalculateIpv6(); PlanVlsm(); SummarizeRoutes(); CalculateRange(); CalculateTransfer(); CalculateMtu();
+    }
+
+    private void Run(Action calculation)
+    {
+        error = null;
+        try { calculation(); }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException) { error = ex.Message; }
+    }
+    private void CalculateIpv4() => Run(() => ipv4 = NetworkCalculatorService.CalculateIpv4(ipv4Address, ipv4Prefix));
+    private void ConvertMask() => Run(() => mask = NetworkCalculatorService.ConvertMask(maskInput));
+    private void CalculateIpv6() => Run(() => ipv6 = NetworkCalculatorService.CalculateIpv6(ipv6Address, ipv6Prefix));
+    private void SummarizeRoutes() => Run(() => summary = NetworkCalculatorService.SummarizeIpv4(Lines(summaryInputs)));
+    private void CalculateRange() => Run(() => range = NetworkCalculatorService.CalculateIpv4Range(rangeStart, rangeEnd));
+    private void CalculateTransfer() => Run(() => transfer = NetworkCalculatorService.CalculateTransfer(dataAmount, dataUnit, linkSpeed, speedUnit, overhead, rtt));
+    private void CalculateMtu() => Run(() => mtu = NetworkCalculatorService.CalculateMtu(mtuValue, mtuIpVersion, tcpOptions));
+    private void PlanVlsm() => Run(() => vlsm = NetworkCalculatorService.PlanVlsm(vlsmParent, Lines(vlsmRequirements).Select(ParseRequirement)));
+    private static IEnumerable<string> Lines(string value) => value.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    private static VlsmRequest ParseRequirement(string line)
+    {
+        var parts = line.Split(',', 2, StringSplitOptions.TrimEntries);
+        if (parts.Length != 2 || !int.TryParse(parts[1], out var hosts)) throw new ArgumentException($"Use 'name, hosts' for requirement '{line}'.");
+        return new(parts[0], hosts);
+    }
+}

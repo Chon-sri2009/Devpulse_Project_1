@@ -445,6 +445,78 @@ var tests = new List<(string Name, Func<Task> Run)>
         catch (InvalidOperationException) { Check(count == 0); return; }
         throw new InvalidOperationException("Expected private website audit rejection");
     }),
+    ("IPv4 calculator returns subnet range, masks, and capacity", () =>
+    {
+        var result = NetworkCalculatorService.CalculateIpv4("192.168.10.25", 24);
+        Check(result.Network == "192.168.10.0" && result.Broadcast == "192.168.10.255");
+        Check(result.FirstUsable == "192.168.10.1" && result.LastUsable == "192.168.10.254");
+        Check(result.SubnetMask == "255.255.255.0" && result.WildcardMask == "0.0.0.255" && result.UsableHosts == 254);
+        return Task.CompletedTask;
+    }),
+    ("IPv4 point-to-point and host routes use modern usable counts", () =>
+    {
+        var pointToPoint = NetworkCalculatorService.CalculateIpv4("10.0.0.4", 31);
+        var host = NetworkCalculatorService.CalculateIpv4("10.0.0.9", 32);
+        Check(pointToPoint.FirstUsable == "10.0.0.4" && pointToPoint.LastUsable == "10.0.0.5" && pointToPoint.UsableHosts == 2);
+        Check(host.Network == "10.0.0.9" && host.UsableHosts == 1);
+        return Task.CompletedTask;
+    }),
+    ("Subnet mask conversion validates contiguous bits", () =>
+    {
+        var result = NetworkCalculatorService.ConvertMask("255.255.252.0");
+        Check(result.Prefix == 22 && result.WildcardMask == "0.0.3.255" && result.TotalAddresses == 1024);
+        try { NetworkCalculatorService.ConvertMask("255.0.255.0"); }
+        catch (ArgumentException) { return Task.CompletedTask; }
+        throw new InvalidOperationException("Expected a non-contiguous mask to be rejected");
+    }),
+    ("IPv6 calculator expands and masks a prefix", () =>
+    {
+        var result = NetworkCalculatorService.CalculateIpv6("2001:db8:10:20::1234", 64);
+        Check(result.Network == "2001:db8:10:20::" && result.LastAddress == "2001:db8:10:20:ffff:ffff:ffff:ffff");
+        Check(result.ExpandedAddress == "2001:0db8:0010:0020:0000:0000:0000:1234" && result.TotalAddresses == "18446744073709551616");
+        return Task.CompletedTask;
+    }),
+    ("Route summarizer finds the smallest covering CIDR", () =>
+    {
+        var result = NetworkCalculatorService.SummarizeIpv4(["10.20.0.0/24", "10.20.1.0/24"]);
+        Check(result.Cidr == "10.20.0.0/23" && result.Broadcast == "10.20.1.255" && result.AdditionalAddresses == 0);
+        return Task.CompletedTask;
+    }),
+    ("IPv4 range calculator counts inclusively and recognizes exact blocks", () =>
+    {
+        var exact = NetworkCalculatorService.CalculateIpv4Range("192.168.1.0", "192.168.1.255");
+        var partial = NetworkCalculatorService.CalculateIpv4Range("192.168.1.50", "192.168.1.199");
+        Check(exact.Count == 256 && exact.ExactCidr == "192.168.1.0/24");
+        Check(partial.Count == 150 && partial.ExactCidr is null);
+        return Task.CompletedTask;
+    }),
+    ("VLSM planner allocates descending non-overlapping subnets", () =>
+    {
+        var result = NetworkCalculatorService.PlanVlsm("10.10.0.0/24", [new("Web", 50), new("DB", 20), new("Management", 10)]);
+        Check(result.Count == 3 && result[0].Cidr == "10.10.0.0/26" && result[0].Capacity == 62);
+        Check(result[1].Cidr == "10.10.0.64/27" && result[2].Cidr == "10.10.0.96/28");
+        return Task.CompletedTask;
+    }),
+    ("VLSM planner rejects requirements that exceed the parent", () =>
+    {
+        try { NetworkCalculatorService.PlanVlsm("10.0.0.0/30", [new("Too large", 10)]); }
+        catch (InvalidOperationException) { return Task.CompletedTask; }
+        throw new InvalidOperationException("Expected oversized VLSM plan to be rejected");
+    }),
+    ("Transfer calculator accounts for overhead and latency", () =>
+    {
+        var result = NetworkCalculatorService.CalculateTransfer(1, "GB", 100, "Mbps", 0, 20);
+        Check(Math.Abs(result.Seconds - 80) < 0.001 && Math.Abs(result.BandwidthDelayProductBytes - 250000) < 0.001);
+        return Task.CompletedTask;
+    }),
+    ("MTU calculator returns TCP MSS and UDP payload", () =>
+    {
+        var ipv4 = NetworkCalculatorService.CalculateMtu(1500, 4, 0);
+        var ipv6 = NetworkCalculatorService.CalculateMtu(1500, 6, 20);
+        Check(ipv4.TcpMss == 1460 && ipv4.UdpPayload == 1472 && ipv4.EthernetFrameBytes == 1518);
+        Check(ipv6.TcpMss == 1420 && ipv6.UdpPayload == 1452);
+        return Task.CompletedTask;
+    }),
     ("Load tester accepts an arbitrary public URL with bounded requests", async () =>
     {
         var count = 0; string? requested = null;
