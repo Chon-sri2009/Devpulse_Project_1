@@ -1,4 +1,5 @@
 @page "/spotify"
+@page "/focus-lounge"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.JSInterop
 @using MiniProject_Everything_1.Services
@@ -10,13 +11,59 @@
 @rendermode InteractiveServer
 @implements IAsyncDisposable
 
-<PageTitle>Spotify Player | DevPulse</PageTitle>
-<div class="spotify-page">
+<PageTitle>Focus Lounge | DevPulse</PageTitle>
+<div class="spotify-page focus-lounge @(calmMode ? "calm-mode" : "")">
     <section class="spotify-hero">
-        <p class="eyebrow">Spotify integration</p>
-        <h1>Your music, connected.</h1>
-        <p>Control Spotify devices in near real time or play through this browser with Spotify Premium.</p>
+        <p class="eyebrow">Developer wellness</p>
+        <h1>Focus Lounge</h1>
+        <p>Focus, breathe, rest, and enjoy your Spotify library without leaving DevPulse.</p>
     </section>
+
+    <section class="wellness-grid" aria-label="Focus and relaxation tools">
+        <article class="wellness-card timer-card">
+            <div class="wellness-heading"><div><p class="connection-label">Focus timer</p><h2>@focusMode session</h2></div><span class="session-count">@completedFocusSessions completed</span></div>
+            <div class="timer-display" role="timer" aria-live="polite">@FocusTime</div>
+            <div class="timer-settings">
+                <label>Focus minutes<input class="form-control" type="number" min="1" max="180" @bind="focusMinutes" disabled="@focusRunning" /></label>
+                <label>Break minutes<input class="form-control" type="number" min="1" max="60" @bind="breakMinutes" disabled="@focusRunning" /></label>
+            </div>
+            <div class="wellness-actions">
+                <button class="spotify-button connect-button" @onclick="ToggleFocusTimer">@(focusRunning ? "Pause" : "Start")</button>
+                <button class="spotify-button secondary-button" @onclick="ResetFocusTimer">Reset</button>
+            </div>
+            <p class="wellness-note">Focus and break sessions alternate automatically. The timer continues while this tab is in the background.</p>
+        </article>
+
+        <article class="wellness-card breathing-card">
+            <div class="wellness-heading"><div><p class="connection-label">Box breathing</p><h2>Four seconds at a time</h2></div></div>
+            <div class="breathing-stage @(breathingActive ? "active" : "")"><div class="breathing-orb"><span>@(breathingActive ? breathingPhase : "Ready")</span></div></div>
+            <button class="spotify-button secondary-button" @onclick="ToggleBreathing">@(breathingActive ? "Stop breathing guide" : "Begin breathing")</button>
+            <p class="wellness-note">Inhale, hold, exhale, and hold for four seconds each. Stop if you feel uncomfortable.</p>
+        </article>
+
+        <article class="wellness-card ambient-card">
+            <div class="wellness-heading"><div><p class="connection-label">Generated ambience</p><h2>Sound without a playlist</h2></div></div>
+            <div class="ambient-options">
+                @foreach (var sound in ambientSounds)
+                {
+                    <button class="ambient-choice @(ambientSound == sound.Id ? "selected" : "")" @onclick="() => PlayAmbient(sound.Id)"><span>@sound.Icon</span>@sound.Name</button>
+                }
+            </div>
+            <label class="ambient-volume">Volume: @ambientVolume%<input type="range" min="0" max="100" value="@ambientVolume" @oninput="ChangeAmbientVolume" /></label>
+            <div class="wellness-actions"><button class="spotify-button secondary-button" disabled="@(ambientSound is null)" @onclick="StopAmbient">Stop sound</button><button class="spotify-button secondary-button" @onclick="ToggleCalmMode">@(calmMode ? "Exit calm mode" : "Full-screen calm mode")</button></div>
+            <p class="wellness-note">Rain, ocean, and brown noise are generated in your browser—no recordings or Spotify audio are used.</p>
+        </article>
+
+        <article class="wellness-card journal-card">
+            <div class="wellness-heading"><div><p class="connection-label">Private reflection</p><h2>Focus note</h2></div><button class="tip-button" @onclick="NextStretchTip" title="Show another break suggestion">New tip</button></div>
+            <blockquote>@stretchTips[stretchTipIndex]</blockquote>
+            <label>What are you focusing on?<textarea class="form-control" maxlength="2000" rows="5" @bind="journalText" placeholder="A short intention, idea, or reminder…"></textarea></label>
+            <div class="wellness-actions"><button class="spotify-button connect-button" @onclick="SaveJournal">Save on this device</button><button class="spotify-button secondary-button" @onclick="ClearJournal">Clear</button></div>
+            @if (journalStatus is not null) { <p class="journal-status" role="status">@journalStatus</p> }
+        </article>
+    </section>
+
+    <div class="spotify-divider"><span>Spotify workspace</span></div>
     @if (!Settings.IsConfigured)
     {
         <section class="spotify-card"><span class="spotify-mark" aria-hidden="true">♫</span>
@@ -298,6 +345,7 @@
     private SpotifyPlaylist? browsedPlaylist;
     private IReadOnlyList<SpotifyDevice> devices = [];
     private IJSObjectReference? spotifyModule;
+    private IJSObjectReference? focusModule;
     private DotNetObjectReference<Spotify>? selfReference;
     private string? error, browserError, albumError, albumMessage, playlistError, playlistMessage, trackError, trackMessage;
     private string trackQuery = "", trackSource = "";
@@ -312,22 +360,38 @@
     private DateTimeOffset nextSync = DateTimeOffset.MinValue;
     private DateTimeOffset lastDeviceSync = DateTimeOffset.MinValue;
     private DateTimeOffset? updated;
+    private readonly (string Id, string Name, string Icon)[] ambientSounds = [("rain", "Rain", "☂"), ("ocean", "Ocean", "≈"), ("brown", "Brown noise", "◉")];
+    private readonly string[] stretchTips = ["Look at something far away for 20 seconds and let your eyes relax.", "Drop your shoulders, unclench your jaw, and take one slow breath.", "Stand up and gently reach both hands toward the ceiling.", "Roll your wrists and ankles slowly in both directions.", "Drink some water before beginning the next focus session."];
+    private string focusMode = "Focus", breathingPhase = "Inhale", journalText = "";
+    private string? ambientSound, journalStatus;
+    private int focusMinutes = 25, breakMinutes = 5, focusRemainingSeconds = 25 * 60, completedFocusSessions, ambientVolume = 35, stretchTipIndex;
+    private bool focusRunning, focusHasStarted, breathingActive, calmMode;
+    private DateTimeOffset focusEndsAt, breathingStartedAt;
     private bool CanControl => !needsLogin && playback?.Device is { Restricted: false, Id.Length: > 0 };
     private bool Blocked(string action) => playback?.Disallowed.Contains(action) == true;
     private int CurrentProgress => playback is null ? 0 : Math.Clamp(progressAnchor +
         (playback.Playing ? (int)(DateTimeOffset.UtcNow - progressAnchoredAt).TotalMilliseconds : 0), 0, playback.DurationMs);
     private static string Duration(int ms) => TimeSpan.FromMilliseconds(Math.Max(0, ms)).ToString(@"m\:ss");
+    private string FocusTime => TimeSpan.FromSeconds(Math.Max(0, focusRemainingSeconds)).ToString(focusRemainingSeconds >= 3600 ? @"h\:mm\:ss" : @"mm\:ss");
     private void EditVolume(ChangeEventArgs e) { if (int.TryParse(e.Value?.ToString(), out var n)) volumeEdit = Math.Clamp(n, 0, 100); }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender || !Settings.IsConfigured) return;
+        if (!firstRender) return;
+        try
+        {
+            focusModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/focus-lounge.js");
+            journalText = await focusModule.InvokeAsync<string>("loadJournal");
+        }
+        catch (JSException) { journalStatus = "Browser-only notes are unavailable in this session."; }
+        liveLoop = LiveLoopAsync();
+        StateHasChanged();
+        if (!Settings.IsConfigured) return;
         user = (await Authentication.GetAuthenticationStateAsync()).User;
         if (user.Identity?.IsAuthenticated != true) return;
         await Sync(includeDevices: true, interactive: false);
         await LoadAlbums(0);
         await LoadPlaylists(0);
-        liveLoop = LiveLoopAsync();
     }
 
     private async Task EnableBrowserPlayer()
@@ -368,13 +432,107 @@
             using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
             while (await timer.WaitForNextTickAsync(lifetime.Token))
             {
-                if (!pageVisible) continue;
-                if (playback?.Playing == true) await InvokeAsync(StateHasChanged);
-                if (!needsLogin && DateTimeOffset.UtcNow >= nextSync)
+                var wellnessChanged = await UpdateWellnessAsync();
+                if (pageVisible && (playback?.Playing == true || wellnessChanged)) await InvokeAsync(StateHasChanged);
+                if (pageVisible && user?.Identity?.IsAuthenticated == true && !needsLogin && DateTimeOffset.UtcNow >= nextSync)
                     await InvokeAsync(() => Sync(includeDevices: false, interactive: false));
             }
         }
         catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
+    }
+
+    private async Task<bool> UpdateWellnessAsync()
+    {
+        var changed = breathingActive;
+        if (breathingActive)
+        {
+            var part = (int)(DateTimeOffset.UtcNow - breathingStartedAt).TotalSeconds % 16 / 4;
+            breathingPhase = part switch { 0 => "Inhale", 1 => "Hold", 2 => "Exhale", _ => "Hold" };
+        }
+        if (!focusRunning) return changed;
+        focusRemainingSeconds = Math.Max(0, (int)Math.Ceiling((focusEndsAt - DateTimeOffset.UtcNow).TotalSeconds));
+        if (focusRemainingSeconds > 0) return true;
+        if (focusMode == "Focus") { completedFocusSessions++; focusMode = "Break"; focusRemainingSeconds = Math.Clamp(breakMinutes, 1, 60) * 60; NextStretchTip(); }
+        else { focusMode = "Focus"; focusRemainingSeconds = Math.Clamp(focusMinutes, 1, 180) * 60; }
+        focusEndsAt = DateTimeOffset.UtcNow.AddSeconds(focusRemainingSeconds);
+        if (focusModule is not null)
+        {
+            try { await focusModule.InvokeVoidAsync("notifySession", focusMode == "Break" ? "Focus complete — take a gentle break." : "Break complete — ready when you are."); }
+            catch (JSException) { }
+        }
+        return true;
+    }
+
+    private async Task ToggleFocusTimer()
+    {
+        if (focusRunning)
+        {
+            focusRemainingSeconds = Math.Max(0, (int)Math.Ceiling((focusEndsAt - DateTimeOffset.UtcNow).TotalSeconds));
+            focusRunning = false;
+            return;
+        }
+        if (!focusHasStarted)
+        {
+            focusMode = "Focus";
+            focusRemainingSeconds = Math.Clamp(focusMinutes, 1, 180) * 60;
+            focusHasStarted = true;
+        }
+        focusRunning = true;
+        focusEndsAt = DateTimeOffset.UtcNow.AddSeconds(Math.Max(1, focusRemainingSeconds));
+        if (focusModule is not null) try { await focusModule.InvokeVoidAsync("requestNotifications"); } catch (JSException) { }
+    }
+
+    private void ResetFocusTimer()
+    {
+        focusRunning = false; focusHasStarted = false; focusMode = "Focus";
+        focusRemainingSeconds = Math.Clamp(focusMinutes, 1, 180) * 60;
+    }
+
+    private void ToggleBreathing()
+    {
+        breathingActive = !breathingActive;
+        breathingPhase = "Inhale";
+        breathingStartedAt = DateTimeOffset.UtcNow;
+    }
+
+    private async Task PlayAmbient(string sound)
+    {
+        if (focusModule is null) { journalStatus = "Ambient audio is unavailable in this browser."; return; }
+        try { await focusModule.InvokeVoidAsync("startAmbient", sound, ambientVolume); ambientSound = sound; }
+        catch (JSException) { journalStatus = "Your browser could not start ambient audio."; }
+    }
+
+    private async Task StopAmbient()
+    {
+        ambientSound = null;
+        if (focusModule is not null) try { await focusModule.InvokeVoidAsync("stopAmbient"); } catch (JSException) { }
+    }
+
+    private async Task ChangeAmbientVolume(ChangeEventArgs args)
+    {
+        if (!int.TryParse(args.Value?.ToString(), out var value)) return;
+        ambientVolume = Math.Clamp(value, 0, 100);
+        if (focusModule is not null) try { await focusModule.InvokeVoidAsync("setAmbientVolume", ambientVolume); } catch (JSException) { }
+    }
+
+    private async Task ToggleCalmMode()
+    {
+        calmMode = !calmMode;
+        if (focusModule is not null) try { await focusModule.InvokeVoidAsync("setFullscreen", calmMode); } catch (JSException) { }
+    }
+
+    private void NextStretchTip() => stretchTipIndex = (stretchTipIndex + 1) % stretchTips.Length;
+    private async Task SaveJournal()
+    {
+        if (focusModule is null) { journalStatus = "Browser-only notes are unavailable."; return; }
+        try { await focusModule.InvokeVoidAsync("saveJournal", journalText); journalStatus = "Saved privately in this browser."; }
+        catch (JSException) { journalStatus = "The note could not be saved."; }
+    }
+    private async Task ClearJournal()
+    {
+        journalText = "";
+        if (focusModule is not null) try { await focusModule.InvokeVoidAsync("saveJournal", ""); } catch (JSException) { }
+        journalStatus = "Focus note cleared.";
     }
 
     private Task Refresh() => Sync(includeDevices: true, interactive: true);
@@ -803,7 +961,7 @@
     public Task OnSpotifyVisibilityChanged(bool visible) => InvokeAsync(async () =>
     {
         pageVisible = visible;
-        if (visible && !needsLogin)
+        if (visible && user?.Identity?.IsAuthenticated == true && !needsLogin)
         {
             nextSync = DateTimeOffset.MinValue;
             await Sync(includeDevices: false, interactive: false);
@@ -819,9 +977,21 @@
         if (liveLoop is not null) await liveLoop;
         if (spotifyModule is not null)
         {
-            try { await spotifyModule.InvokeVoidAsync("disconnect"); }
+            try
+            {
+                await spotifyModule.InvokeVoidAsync("disconnect");
+                await spotifyModule.DisposeAsync();
+            }
             catch (JSDisconnectedException) { }
-            await spotifyModule.DisposeAsync();
+        }
+        if (focusModule is not null)
+        {
+            try
+            {
+                await focusModule.InvokeVoidAsync("dispose");
+                await focusModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException) { }
         }
         selfReference?.Dispose();
         operationGate.Dispose();

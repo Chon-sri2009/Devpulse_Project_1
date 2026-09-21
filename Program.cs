@@ -233,8 +233,8 @@ app.MapGet("/healthz/details", () => Results.Ok(new
 }));
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 app.MapGet("/spotify/login", () => spotify.IsConfigured
-    ? Results.Challenge(new AuthenticationProperties { RedirectUri = "/spotify" }, ["Spotify"])
-    : Results.Redirect("/spotify?error=configuration"));
+    ? Results.Challenge(new AuthenticationProperties { RedirectUri = "/focus-lounge" }, ["Spotify"])
+    : Results.Redirect("/focus-lounge?error=configuration"));
 app.MapGet("/spotify/browser-token", async (HttpContext context, SpotifyPlayerService player) =>
 {
     context.Response.Headers.CacheControl = "no-store, private";
@@ -252,7 +252,7 @@ app.MapPost("/spotify/logout", async (HttpContext context, IAntiforgery antiforg
     catch (AntiforgeryValidationException) { return Results.BadRequest(); }
     await store.RemoveAsync(context.User, context.RequestAborted);
     await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-    return Results.LocalRedirect("/spotify");
+    return Results.LocalRedirect("/focus-lounge");
 });
 app.MapPost("/admin/login", async (HttpContext context, IAntiforgery antiforgery,
     AdminAccessService access, TelemetryStore telemetry) =>

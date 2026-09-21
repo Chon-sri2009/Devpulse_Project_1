@@ -1,6 +1,6 @@
 # DevPulse
 
-A .NET 9 Blazor Server dashboard with host diagnostics and a Spotify Connect/browser player.
+A .NET 9 Blazor Server dashboard with host diagnostics, a developer Focus Lounge, and a Spotify Connect/browser player.
 
 ## Run locally
 
@@ -11,7 +11,7 @@ dotnet restore
 dotnet run --launch-profile http
 ```
 
-Open http://127.0.0.1:5214. The dashboard works without Spotify credentials. Visual Studio 2022 version 17.12 or later supports .NET 9.
+Open http://127.0.0.1:5214. The dashboard and Focus Lounge wellness tools work without Spotify credentials. Visual Studio 2022 version 17.12 or later supports .NET 9.
 
 Diagnostics describe the machine running DevPulse. A hosted deployment reports its server/container. Windows uses WMI for detailed hardware information; other platforms show OS, process architecture, processors and memory available to the process.
 
@@ -25,7 +25,7 @@ Diagnostics describe the machine running DevPulse. A hosted deployment reports i
 - **Website Audit:** bounded crawling, broken-link and asset checks, security/cache headers, response timing, JSON dataset validation, SEO checks, Lighthouse, axe accessibility, scripted browser journeys, desktop/mobile screenshots, visual regression, and scheduled uptime monitoring.
 - **Administration:** separate administrator cookie, process listing/termination, maintenance mode, audit history, and redacted diagnostics ZIP export.
 - **Alerts:** memory, disk, and request-latency thresholds with in-app incidents plus optional HTTPS webhook and SMTP delivery.
-- **Spotify:** protected OAuth/PKCE sessions, catalog song search, Liked Songs, exact-track selection, album/playlist track browsing, queue viewing/additions, saved albums, created/followed/private/collaborative playlists, shuffle/repeat, device-first Spotify Connect control, optional browser audio, live progress, seek/volume controls, and rate-limit handling.
+- **Focus Lounge + Spotify:** focus/break timer, box-breathing guide, procedurally generated rain/ocean/brown-noise ambience, fullscreen calm mode, break suggestions, a browser-local private focus note, plus protected OAuth/PKCE Spotify sessions, catalog search, Liked Songs, exact-track selection, album/playlist browsing, queue controls, saved albums/playlists, shuffle/repeat, Spotify Connect control, and optional browser audio.
 - Health endpoint, diagnostics production gate, friendly error/404 pages, persistent encrypted sessions, CI, and production smoke tests.
 
 ## Spotify setup

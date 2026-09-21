@@ -51,7 +51,7 @@ try {
         Start-Sleep -Milliseconds 250
     }
     if (!$ready) { throw 'Server did not become ready.' }
-    foreach ($path in @('/', '/dashboard', '/spotify', '/healthz', '/admin')) {
+    foreach ($path in @('/', '/dashboard', '/spotify', '/focus-lounge', '/healthz', '/admin')) {
         $r = $client.GetAsync($path).GetAwaiter().GetResult()
         if ([int]$r.StatusCode -ne 200) { throw "$path returned $($r.StatusCode)" }
         if ($path -eq '/') {
@@ -78,6 +78,7 @@ try {
     $assets = @([regex]::Matches($html, 'href="([^"]+\.css)"') | ForEach-Object { $_.Groups[1].Value })
     $assets += '_framework/blazor.web.js'
     $assets += 'js/spotify-player.js'
+    $assets += 'js/focus-lounge.js'
     foreach ($asset in $assets) {
         $r = $client.GetAsync('/' + $asset.TrimStart('/')).GetAwaiter().GetResult()
         $bytes = $r.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult()
