@@ -1,0 +1,192 @@
+{"kind":"deck","id":"pr/r5b8dr","name":"Deck"}
+{"kind":"layout","layoutId":"6e8e2e9f-5297-4ef7-b78e-5f8a12c98dec","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"a00fe581-e548-4cec-b4f2-eba3ce98c90d","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/xc5fad","slide":1,"title":"DP","textShapes":6}
+{"kind":"shape","id":"sh/vqlkfulw","slide":1,"bbox":[0,0,24,720]}
+{"kind":"textbox","id":"sh/grulozmh","slide":1,"text":"DP","textPreview":"DP","textChars":2,"textLines":1,"bbox":[82,74,64,64]}
+{"kind":"textbox","id":"sh/hc32h432","slide":1,"text":"DevPulse","textPreview":"DevPulse","textChars":8,"textLines":1,"bbox":[82,196,1040,96]}
+{"kind":"textbox","id":"sh/mls3ip4f","slide":1,"text":"Version 1 project presentation","textPreview":"Version 1 project presentation","textChars":30,"textLines":1,"bbox":[84,300,820,42]}
+{"kind":"textbox","id":"sh/7m1kbul0","slide":1,"text":"IT diagnostics, testing, and developer focus in one web workspace","textPreview":"IT diagnostics, testing, and developer focus in one web workspace","textChars":65,"textLines":1,"bbox":[84,372,830,88]}
+{"kind":"textbox","id":"sh/8nalkfm5","slide":1,"text":"Built with .NET 9 and Blazor Server","textPreview":"Built with .NET 9 and Blazor Server","textChars":35,"textLines":1,"bbox":[84,612,520,26]}
+{"kind":"shape","id":"sh/toj2dk3q","slide":1,"bbox":[1014,518,148,148]}
+{"kind":"textbox","id":"sh/yhs3e543","slide":1,"text":"V1","textPreview":"V1","textChars":2,"textLines":1,"bbox":[1014,550,148,70]}
+{"kind":"notes","id":"nt/xc5fad","slide":1,"text":"Open by introducing DevPulse as a personal IT operations workspace. Version 1 combines system diagnostics, network tools, website testing, API checks, and a developer wellness area. Source: project README and running application."}
+{"kind":"slide","id":"sl/2gjh8p","slide":2,"title":"PURPOSE","textShapes":7}
+{"kind":"textbox","id":"sh/9wvq50ra","slide":2,"text":"PURPOSE","textPreview":"PURPOSE","textChars":7,"textLines":1,"bbox":[72,42,1120,24]}
+{"kind":"textbox","id":"sh/mtk7a58j","slide":2,"text":"The project goal","textPreview":"The project goal","textChars":16,"textLines":1,"bbox":[72,72,1136,58]}
+{"kind":"textbox","id":"sh/nud83a94","slide":2,"text":"Developers often switch between operating system tools, network calculators, API clients, website auditors, and music applications.","textPreview":"Developers often switch between operating system tools, network calculators, API clients, website auditors, and music applications.","textChars":131,"textLines":1,"bbox":[72,168,470,150]}
+{"kind":"textbox","id":"sh/0r2p8vqt","slide":2,"text":"DevPulse brings these tasks into one controlled browser workspace. The application emphasizes bounded tests, clear ownership checks, and results that are easy to demonstrate.","textPreview":"DevPulse brings these tasks into one controlled browser workspace. The application emphasizes bounded tests, clear ownership checks, and ...","textChars":174,"textLines":1,"bbox":[72,345,470,160]}
+{"kind":"textbox","id":"sh/e5k76l8n","slide":2,"text":"One workspace for day-to-day IT checks","textPreview":"One workspace for day-to-day IT checks","textChars":38,"textLines":1,"bbox":[594,626,614,26]}
+{"kind":"textbox","id":"sh/f6t8zq98","slide":2,"text":"DevPulse Version 1","textPreview":"DevPulse Version 1","textChars":18,"textLines":1,"bbox":[72,682,300,18]}
+{"kind":"textbox","id":"sh/kn69kzqx","slide":2,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[1160,682,48,18]}
+{"kind":"image","id":"im/szadkzud","slide":2,"name":"","geometry":"roundRect","alt":"DevPulse operations overview screenshot","bbox":[594,154,614,454]}
+{"kind":"notes","id":"nt/2gjh8p","slide":2,"text":"Frame the problem as tool switching and fragmented evidence. DevPulse does not replace enterprise monitoring. It gives students, developers, and small teams one place to run bounded checks and understand what the server sees."}
+{"kind":"slide","id":"sl/bpr58t","slide":3,"title":"PRODUCT","textShapes":15}
+{"kind":"textbox","id":"sh/3e5kbe1s","slide":3,"text":"PRODUCT","textPreview":"PRODUCT","textChars":7,"textLines":1,"bbox":[72,42,1120,24]}
+{"kind":"textbox","id":"sh/4fe1kjid","slide":3,"text":"Version 1 scope","textPreview":"Version 1 scope","textChars":15,"textLines":1,"bbox":[72,72,1136,58]}
+{"kind":"shape","id":"sh/5gn2d4jy","slide":3,"bbox":[72,154,10,78]}
+{"kind":"textbox","id":"sh/u9cjep0b","slide":3,"text":"OBSERVE","textPreview":"OBSERVE","textChars":7,"textLines":1,"bbox":[108,162,165,28]}
+{"kind":"textbox","id":"sh/valk7u1g","slide":3,"text":"Host metrics, storage, processes, telemetry, incidents","textPreview":"Host metrics, storage, processes, telemetry, incidents","textChars":54,"textLines":1,"bbox":[278,159,870,48]}
+{"kind":"shape","id":"sh/gbu1gzi1","slide":3,"bbox":[72,248,10,78]}
+{"kind":"textbox","id":"sh/hc3294jm","slide":3,"text":"TEST","textPreview":"TEST","textChars":4,"textLines":1,"bbox":[108,256,165,28]}
+{"kind":"textbox","id":"sh/65sjap0z","slide":3,"text":"Ping, DNS, TLS, ports, databases, websites, APIs","textPreview":"Ping, DNS, TLS, ports, databases, websites, APIs","textChars":48,"textLines":1,"bbox":[278,253,870,48]}
+{"kind":"shape","id":"sh/76l03u1k","slide":3,"bbox":[72,342,10,78]}
+{"kind":"textbox","id":"sh/fihgbqd8","slide":3,"text":"INSPECT","textPreview":"INSPECT","textChars":7,"textLines":1,"bbox":[108,350,165,28]}
+{"kind":"textbox","id":"sh/eh8zilwn","slide":3,"text":"JSON, JWT, SHA-256, encrypted files, DNS email policy","textPreview":"JSON, JWT, SHA-256, encrypted files, DNS email policy","textChars":53,"textLines":1,"bbox":[278,347,870,48]}
+{"kind":"shape","id":"sh/14zid0ve","slide":3,"bbox":[72,436,10,78]}
+{"kind":"textbox","id":"sh/0jqhkvet","slide":3,"text":"PLAN","textPreview":"PLAN","textChars":4,"textLines":1,"bbox":[108,444,165,28]}
+{"kind":"textbox","id":"sh/n6h0fqd4","slide":3,"text":"IPv4, IPv6, VLSM, routes, bandwidth, MTU and MSS","textPreview":"IPv4, IPv6, VLSM, routes, bandwidth, MTU and MSS","textChars":48,"textLines":1,"bbox":[278,441,870,48]}
+{"kind":"shape","id":"sh/258zm5wz","slide":3,"bbox":[72,530,10,78]}
+{"kind":"textbox","id":"sh/p8jih0va","slide":3,"text":"FOCUS","textPreview":"FOCUS","textChars":5,"textLines":1,"bbox":[108,538,165,28]}
+{"kind":"textbox","id":"sh/o7ahovep","slide":3,"text":"Timer, breathing, ambient sound, reflection, Spotify","textPreview":"Timer, breathing, ambient sound, reflection, Spotify","textChars":52,"textLines":1,"bbox":[278,535,870,48]}
+{"kind":"textbox","id":"sh/3axg36x0","slide":3,"text":"The same navigation supports technical demonstrations and daily use.","textPreview":"The same navigation supports technical demonstrations and daily use.","textChars":68,"textLines":1,"bbox":[72,636,980,28]}
+{"kind":"textbox","id":"sh/i9oza1wf","slide":3,"text":"DevPulse Version 1","textPreview":"DevPulse Version 1","textChars":18,"textLines":1,"bbox":[72,682,300,18]}
+{"kind":"textbox","id":"sh/6hwbydkf","slide":3,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[1160,682,48,18]}
+{"kind":"notes","id":"nt/bpr58t","slide":3,"text":"Use this slide as the feature map. Avoid reading every item. Pick one example from each row, then transition into the architecture and live screens."}
+{"kind":"slide","id":"sl/zhw7ho","slide":4,"title":"DESIGN","textShapes":13}
+{"kind":"textbox","id":"sh/l4fu5czy","slide":4,"text":"DESIGN","textPreview":"DESIGN","textChars":6,"textLines":1,"bbox":[72,42,1120,24]}
+{"kind":"textbox","id":"sh/yhobax07","slide":4,"text":"Application architecture","textPreview":"Application architecture","textChars":24,"textLines":1,"bbox":[72,72,1136,58]}
+{"kind":"shape","id":"sh/jixc32hs","slide":4,"bbox":[74,206,240,154]}
+{"kind":"textbox","id":"sh/876tgrip","slide":4,"text":"Browser","textPreview":"Browser","textChars":7,"textLines":1,"bbox":[98,230,190,34]}
+{"kind":"textbox","id":"sh/t8zu9czu","slide":4,"text":"Interactive Blazor circuit\nUser actions and live updates","textPreview":"Interactive Blazor circuit | User actions and live updates","textChars":56,"textLines":2,"bbox":[98,280,190,58]}
+{"kind":"shape","id":"sh/65obeh0j","slide":4,"bbox":[454,168,350,230]}
+{"kind":"textbox","id":"sh/76xc7mh4","slide":4,"text":".NET 9 Blazor Server","textPreview":".NET 9 Blazor Server","textChars":20,"textLines":1,"bbox":[484,202,290,40]}
+{"kind":"textbox","id":"sh/gbqtkril","slide":4,"text":"Razor components\nApplication services\nSafety validation","textPreview":"Razor components | Application services | Safety validation","textChars":55,"textLines":3,"bbox":[490,272,280,90]}
+{"kind":"shape","id":"sh/hczudwz6","slide":4,"bbox":[944,114,262,180]}
+{"kind":"textbox","id":"sh/9ovaxgba","slide":4,"text":"System and storage","textPreview":"System and storage","textChars":18,"textLines":1,"bbox":[970,144,210,34]}
+{"kind":"textbox","id":"sh/8n29obap","slide":4,"text":"Runtime metrics\nProcesses and files","textPreview":"Runtime metrics | Processes and files","textChars":35,"textLines":2,"bbox":[970,200,210,56]}
+{"kind":"shape","id":"sh/nmtsvqt4","slide":4,"bbox":[944,358,262,180]}
+{"kind":"textbox","id":"sh/mlkrmlsj","slide":4,"text":"Approved services","textPreview":"Approved services","textChars":17,"textLines":1,"bbox":[970,388,210,34]}
+{"kind":"textbox","id":"sh/xcva10b6","slide":4,"text":"Websites, APIs, DNS\nSpotify and OTLP","textPreview":"Websites, APIs, DNS | Spotify and OTLP","textChars":36,"textLines":2,"bbox":[970,444,210,56]}
+{"kind":"shape","id":"sh/wrm9sval","slide":4,"bbox":[314,283,140,0]}
+{"kind":"shape","id":"sh/vqdszqt0","slide":4,"bbox":[804,204,140,79]}
+{"kind":"shape","id":"sh/ap4rqlsf","slide":4,"bbox":[804,283,140,165]}
+{"kind":"textbox","id":"sh/dwbqpwb2","slide":4,"text":"Encrypted session state and bounded telemetry journals use the configured data directory.","textPreview":"Encrypted session state and bounded telemetry journals use the configured data directory.","textChars":89,"textLines":1,"bbox":[394,514,470,64]}
+{"kind":"textbox","id":"sh/cvi9grah","slide":4,"text":"DevPulse Version 1","textPreview":"DevPulse Version 1","textChars":18,"textLines":1,"bbox":[72,682,300,18]}
+{"kind":"textbox","id":"sh/4zm9wbid","slide":4,"text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[1160,682,48,18]}
+{"kind":"notes","id":"nt/zhw7ho","slide":4,"text":"Explain that Blazor Server executes diagnostics on the machine hosting DevPulse. A Render deployment therefore reports Render's container, not the visitor's computer. External requests pass through validation and bounded HTTP clients. Sources: Program.cs, PublicHttpTarget.cs, TelemetryService.cs."}
+{"kind":"slide","id":"sl/o337hv","slide":5,"title":"OBSERVE","textShapes":8}
+{"kind":"textbox","id":"sh/ozelknmt","slide":5,"text":"OBSERVE","textPreview":"OBSERVE","textChars":7,"textLines":1,"bbox":[72,42,1120,24]}
+{"kind":"textbox","id":"sh/3y54bil8","slide":5,"text":"Operations and telemetry","textPreview":"Operations and telemetry","textChars":24,"textLines":1,"bbox":[72,72,1136,58]}
+{"kind":"textbox","id":"sh/c3ylonmp","slide":5,"text":"Bounded checks","textPreview":"Bounded checks","textChars":14,"textLines":1,"bbox":[72,564,220,28]}
+{"kind":"textbox","id":"sh/b2p4f2l4","slide":5,"text":"HTTP, TCP, ping, DNS, TLS, database connectivity, and approved log files","textPreview":"HTTP, TCP, ping, DNS, TLS, database connectivity, and approved log files","textChars":72,"textLines":1,"bbox":[72,598,500,54]}
+{"kind":"textbox","id":"sh/q1g3mx4j","slide":5,"text":"Evidence over time","textPreview":"Evidence over time","textChars":18,"textLines":1,"bbox":[660,564,220,28]}
+{"kind":"textbox","id":"sh/lsrmlc36","slide":5,"text":"Runtime metrics, request traces, deployment identity, threshold incidents, and optional OTLP export","textPreview":"Runtime metrics, request traces, deployment identity, threshold incidents, and optional OTLP export","textChars":99,"textLines":1,"bbox":[660,598,530,54]}
+{"kind":"textbox","id":"sh/0rils7m1","slide":5,"text":"DevPulse Version 1","textPreview":"DevPulse Version 1","textChars":18,"textLines":1,"bbox":[72,682,300,18]}
+{"kind":"textbox","id":"sh/254z2dc3","slide":5,"text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[1160,682,48,18]}
+{"kind":"image","id":"im/balg3m50","slide":5,"name":"","geometry":"roundRect","alt":"Service operations screenshot","bbox":[72,152,548,388]}
+{"kind":"image","id":"im/kfuh0r6h","slide":5,"name":"","geometry":"roundRect","alt":"Telemetry explorer screenshot","bbox":[660,152,548,388]}
+{"kind":"notes","id":"nt/o337hv","slide":5,"text":"Demonstrate that Operations answers whether a service can be reached now, while Telemetry preserves evidence about application behavior over time. Clarify that private addresses need explicit owner configuration."}
+{"kind":"slide","id":"sl/60kg9d","slide":6,"title":"PLAN AND INSPECT","textShapes":8}
+{"kind":"textbox","id":"sh/9kvmhcba","slide":6,"text":"PLAN AND INSPECT","textPreview":"PLAN AND INSPECT","textChars":16,"textLines":1,"bbox":[72,42,1120,24]}
+{"kind":"textbox","id":"sh/mhk3mhsj","slide":6,"text":"Network planning and local inspectors","textPreview":"Network planning and local inspectors","textChars":37,"textLines":1,"bbox":[72,72,1136,58]}
+{"kind":"textbox","id":"sh/wnmlsra1","slide":6,"text":"Network calculations","textPreview":"Network calculations","textChars":20,"textLines":1,"bbox":[782,164,390,34]}
+{"kind":"textbox","id":"sh/h8vmlwbm","slide":6,"text":"IPv4 and IPv6 subnet details\nVLSM allocation and route summaries\nBandwidth, transfer time, MTU, and MSS","textPreview":"IPv4 and IPv6 subnet details | VLSM allocation and route summaries | Bandwidth, transfer time, MTU, and MSS","textChars":103,"textLines":3,"bbox":[782,214,400,170]}
+{"kind":"textbox","id":"sh/ul43qhsv","slide":6,"text":"Local data inspection","textPreview":"Local data inspection","textChars":21,"textLines":1,"bbox":[782,412,390,34]}
+{"kind":"textbox","id":"sh/vmd4jmtg","slide":6,"text":"JSON tree and JWT payload decoding\nSHA-256 integrity checks\nAES-256-GCM file encryption and decryption","textPreview":"JSON tree and JWT payload decoding | SHA-256 integrity checks | AES-256-GCM file encryption and decryption","textChars":102,"textLines":3,"bbox":[782,462,400,170]}
+{"kind":"textbox","id":"sh/4b6lwbax","slide":6,"text":"DevPulse Version 1","textPreview":"DevPulse Version 1","textChars":18,"textLines":1,"bbox":[72,682,300,18]}
+{"kind":"textbox","id":"sh/5cfmpwbi","slide":6,"text":"06","textPreview":"06","textChars":2,"textLines":1,"bbox":[1160,682,48,18]}
+{"kind":"image","id":"im/etw7m1s7","slide":6,"name":"","geometry":"roundRect","alt":"Network calculator screenshot","bbox":[72,152,660,470]}
+{"kind":"notes","id":"nt/60kg9d","slide":6,"text":"The calculator performs local arithmetic and contacts no target. Uploaded inspector files stay in memory and are not stored. SHA-256 proves integrity but cannot be decoded, while AES encryption can be reversed only with the password."}
+{"kind":"slide","id":"sl/u9iqg1","slide":7,"title":"TEST","textShapes":8}
+{"kind":"textbox","id":"sh/qpcjmp8r","slide":7,"text":"TEST","textPreview":"TEST","textChars":4,"textLines":1,"bbox":[72,42,1120,24]}
+{"kind":"textbox","id":"sh/ds32xk7i","slide":7,"text":"Website and API assurance","textPreview":"Website and API assurance","textChars":25,"textLines":1,"bbox":[72,72,1136,58]}
+{"kind":"textbox","id":"sh/i1sji58v","slide":7,"text":"Website Audit","textPreview":"Website Audit","textChars":13,"textLines":1,"bbox":[72,512,250,30]}
+{"kind":"textbox","id":"sh/5o3itk76","slide":7,"text":"Crawl checks, headers, JSON validation, Lighthouse, accessibility, screenshots, visual baselines, and scheduled uptime","textPreview":"Crawl checks, headers, JSON validation, Lighthouse, accessibility, screenshots, visual baselines, and scheduled uptime","textChars":118,"textLines":1,"bbox":[72,550,600,72]}
+{"kind":"textbox","id":"sh/43u1kfq1","slide":7,"text":"API and DNS","textPreview":"API and DNS","textChars":11,"textLines":1,"bbox":[752,512,250,30]}
+{"kind":"textbox","id":"sh/vy10nqp4","slide":7,"text":"Temporary request collections, assertions, response previews, and public DNS email-policy inspection","textPreview":"Temporary request collections, assertions, response previews, and public DNS email-policy inspection","textChars":100,"textLines":1,"bbox":[752,550,430,72]}
+{"kind":"textbox","id":"sh/uxsju58j","slide":7,"text":"DevPulse Version 1","textPreview":"DevPulse Version 1","textChars":18,"textLines":1,"bbox":[72,682,300,18]}
+{"kind":"textbox","id":"sh/83qpk36d","slide":7,"text":"07","textPreview":"07","textChars":2,"textLines":1,"bbox":[1160,682,48,18]}
+{"kind":"image","id":"im/1svq5obu","slide":7,"name":"","geometry":"roundRect","alt":"Website audit screenshot","bbox":[72,150,640,330]}
+{"kind":"image","id":"im/q1k769c7","slide":7,"name":"","geometry":"roundRect","alt":"API collection runner screenshot","bbox":[752,150,456,330]}
+{"kind":"notes","id":"nt/u9iqg1","slide":7,"text":"The Website Audit combines a bounded crawler with an optional browser worker. The API Runner supports read-only public requests and restricts write methods to exact approved URLs. The DNS inspector checks MX, SPF, DMARC, DKIM, CAA, and addressing records."}
+{"kind":"slide","id":"sl/wjx797","slide":8,"title":"DEVELOPER WELLNESS","textShapes":7}
+{"kind":"textbox","id":"sh/ehsb6xcr","slide":8,"text":"DEVELOPER WELLNESS","textPreview":"DEVELOPER WELLNESS","textChars":18,"textLines":1,"bbox":[72,42,1120,24]}
+{"kind":"textbox","id":"sh/1kjahsv2","slide":8,"text":"Focus Lounge and Spotify","textPreview":"Focus Lounge and Spotify","textChars":24,"textLines":1,"bbox":[72,72,1136,58]}
+{"kind":"textbox","id":"sh/rehsbid0","slide":8,"text":"A quieter workspace","textPreview":"A quieter workspace","textChars":19,"textLines":1,"bbox":[850,170,330,38]}
+{"kind":"textbox","id":"sh/qd8r2dcf","slide":8,"text":"Focus and break timer\nGuided box breathing\nGenerated ambient sound\nPrivate browser-local notes\nSpotify Connect and optional browser playback","textPreview":"Focus and break timer | Guided box breathing | Generated ambient sound | Private browser-local notes | Spotify Connect and optional brows...","textChars":140,"textLines":5,"bbox":[850,238,330,280]}
+{"kind":"textbox","id":"sh/dgjadsv6","slide":8,"text":"Spotify credentials remain server-side. OAuth sessions use encrypted storage and opaque cookies.","textPreview":"Spotify credentials remain server-side. OAuth sessions use encrypted storage and opaque cookies.","textChars":96,"textLines":1,"bbox":[850,548,330,76]}
+{"kind":"textbox","id":"sh/cfqt4nul","slide":8,"text":"DevPulse Version 1","textPreview":"DevPulse Version 1","textChars":18,"textLines":1,"bbox":[72,682,300,18]}
+{"kind":"textbox","id":"sh/balsnmdk","slide":8,"text":"08","textPreview":"08","textChars":2,"textLines":1,"bbox":[1160,682,48,18]}
+{"kind":"image","id":"im/9w72d0fi","slide":8,"name":"","geometry":"roundRect","alt":"Focus Lounge screenshot","bbox":[72,148,730,500]}
+{"kind":"notes","id":"nt/wjx797","slide":8,"text":"This module gives the presentation a human side. Explain that Spotify playback can remain on the user's phone or computer through Spotify Connect. Browser playback requires Premium and an explicit user action."}
+{"kind":"slide","id":"sl/smph2d","slide":9,"title":"SECURITY","textShapes":11}
+{"kind":"textbox","id":"sh/s3i1gvu9","slide":9,"text":"SECURITY","textPreview":"SECURITY","textChars":8,"textLines":1,"bbox":[72,42,260,24]}
+{"kind":"textbox","id":"sh/r290nqto","slide":9,"text":"Safety boundaries in Version 1","textPreview":"Safety boundaries in Version 1","textChars":30,"textLines":1,"bbox":[72,72,1136,58]}
+{"kind":"shape","id":"sh/q10jelc3","slide":9,"bbox":[72,176,350,360]}
+{"kind":"textbox","id":"sh/5grilgbi","slide":9,"text":"Network controls","textPreview":"Network controls","textChars":16,"textLines":1,"bbox":[104,208,286,34]}
+{"kind":"textbox","id":"sh/4fy1cbud","slide":9,"text":"Private and reserved targets blocked by default\nRedirects disabled for diagnostic clients\nOwner allowlists permit intentional private checks\nStrict request, response, timeout, and concurrency caps","textPreview":"Private and reserved targets blocked by default | Redirects disabled for diagnostic clients | Owner allowlists permit intentional private...","textChars":196,"textLines":4,"bbox":[104,270,280,220]}
+{"kind":"shape","id":"sh/3ep0j6ts","slide":9,"bbox":[466,176,350,360]}
+{"kind":"textbox","id":"sh/idgja1c7","slide":9,"text":"Secrets and sessions","textPreview":"Secrets and sessions","textChars":20,"textLines":1,"bbox":[498,208,286,34]}
+{"kind":"textbox","id":"sh/hc7ihgbm","slide":9,"text":"Environment variables or external secret files\nEncrypted Spotify token storage\nNo credentials committed to appsettings.json\nAuthorization values stay transient in the API Runner","textPreview":"Environment variables or external secret files | Encrypted Spotify token storage | No credentials committed to appsettings.json | Authori...","textChars":177,"textLines":4,"bbox":[498,270,280,220]}
+{"kind":"shape","id":"sh/gby18bu1","slide":9,"bbox":[860,176,348,360]}
+{"kind":"textbox","id":"sh/6t8bupg3","slide":9,"text":"Administrative actions","textPreview":"Administrative actions","textChars":22,"textLines":1,"bbox":[892,208,284,34]}
+{"kind":"textbox","id":"sh/7uhcnuxo","slide":9,"text":"Separate administrator authentication\nRate limits and antiforgery protection\nProcess termination disabled unless explicitly enabled\nProduction diagnostics can be hidden completely","textPreview":"Separate administrator authentication | Rate limits and antiforgery protection | Process termination disabled unless explicitly enabled |...","textChars":179,"textLines":4,"bbox":[892,270,280,220]}
+{"kind":"textbox","id":"sh/8vqtwzy9","slide":9,"text":"Public deployments should place diagnostic pages behind authenticated access.","textPreview":"Public deployments should place diagnostic pages behind authenticated access.","textChars":77,"textLines":1,"bbox":[72,588,1136,38]}
+{"kind":"textbox","id":"sh/twzup4fu","slide":9,"text":"DevPulse Version 1","textPreview":"DevPulse Version 1","textChars":18,"textLines":1,"bbox":[72,682,300,18]}
+{"kind":"textbox","id":"sh/y5obq5g7","slide":9,"text":"09","textPreview":"09","textChars":2,"textLines":1,"bbox":[1160,682,48,18]}
+{"kind":"notes","id":"nt/smph2d","slide":9,"text":"Version 1 has strong request-level boundaries, but the current public Render deployment exposes diagnostic pages anonymously. Before a public launch, require administrator authentication or a private access gateway. This also supports the ongoing Google Safe Browsing review."}
+{"kind":"slide","id":"sl/9k3o6o","slide":10,"title":"OPERATE","textShapes":14}
+{"kind":"textbox","id":"sh/x8by5wbi","slide":10,"text":"OPERATE","textPreview":"OPERATE","textChars":7,"textLines":1,"bbox":[72,42,1120,24]}
+{"kind":"textbox","id":"sh/alkzahs7","slide":10,"text":"Deployment and configuration","textPreview":"Deployment and configuration","textChars":28,"textLines":1,"bbox":[72,72,1136,58]}
+{"kind":"shape","id":"sh/bmtg3mts","slide":10,"bbox":[72,190,250,132]}
+{"kind":"textbox","id":"sh/oj2x87a1","slide":10,"text":"Local development","textPreview":"Local development","textChars":17,"textLines":1,"bbox":[96,215,202,30]}
+{"kind":"textbox","id":"sh/pkby1cbm","slide":10,"text":".NET 9 SDK\nUser Secrets","textPreview":".NET 9 SDK | User Secrets","textChars":23,"textLines":2,"bbox":[96,262,202,45]}
+{"kind":"shape","id":"sh/2h0f6hsv","slide":10,"bbox":[515,190,250,132]}
+{"kind":"textbox","id":"sh/ni9gz2tg","slide":10,"text":"Docker image","textPreview":"Docker image","textChars":12,"textLines":1,"bbox":[539,215,202,30]}
+{"kind":"textbox","id":"sh/8fmhkba5","slide":10,"text":"Published application\nNon-root container user","textPreview":"Published application | Non-root container user","textChars":45,"textLines":2,"bbox":[539,262,202,45]}
+{"kind":"shape","id":"sh/tgvydgrq","slide":10,"bbox":[958,190,250,132]}
+{"kind":"textbox","id":"sh/do3epcz2","slide":10,"text":"Render service","textPreview":"Render service","textChars":14,"textLines":1,"bbox":[982,215,202,30]}
+{"kind":"textbox","id":"sh/snudw7yh","slide":10,"text":"HTTPS proxy\nPersistent data volume","textPreview":"HTTPS proxy | Persistent data volume","textChars":34,"textLines":2,"bbox":[982,262,202,45]}
+{"kind":"shape","id":"sh/rmlwn2hw","slide":10,"bbox":[322,256,193,0]}
+{"kind":"shape","id":"sh/qlcvuxgb","slide":10,"bbox":[765,256,193,0]}
+{"kind":"textbox","id":"sh/5k3elszq","slide":10,"text":"Configuration that must stay outside Git","textPreview":"Configuration that must stay outside Git","textChars":40,"textLines":1,"bbox":[72,400,520,34]}
+{"kind":"textbox","id":"sh/4judsnyl","slide":10,"text":"Spotify client ID and secret\nAdministrator password\nSMTP credentials and webhook destinations\nExternal secrets file and persistent encryption keys","textPreview":"Spotify client ID and secret | Administrator password | SMTP credentials and webhook destinations | External secrets file and persistent ...","textChars":146,"textLines":4,"bbox":[72,454,510,170]}
+{"kind":"textbox","id":"sh/3ilwjih0","slide":10,"text":"Deployment checks","textPreview":"Deployment checks","textChars":17,"textLines":1,"bbox":[690,400,420,34]}
+{"kind":"textbox","id":"sh/ihsvqxgf","slide":10,"text":"Health endpoint at /healthz\nCorrect Spotify callback URL\nTrusted reverse proxy configuration\nDiagnostics exposure reviewed before launch","textPreview":"Health endpoint at /healthz | Correct Spotify callback URL | Trusted reverse proxy configuration | Diagnostics exposure reviewed before l...","textChars":136,"textLines":4,"bbox":[690,454,480,170]}
+{"kind":"textbox","id":"sh/pgnexwfa","slide":10,"text":"DevPulse Version 1","textPreview":"DevPulse Version 1","textChars":18,"textLines":1,"bbox":[72,682,300,18]}
+{"kind":"textbox","id":"sh/ofed4ryp","slide":10,"text":"10","textPreview":"10","textChars":2,"textLines":1,"bbox":[1160,682,48,18]}
+{"kind":"notes","id":"nt/9k3o6o","slide":10,"text":"Local credentials use .NET User Secrets. Render credentials use environment variables or a mounted secret file. Persistent storage keeps data-protection keys and encrypted sessions across container replacement."}
+{"kind":"slide","id":"sl/5d1hvp","slide":11,"title":"QUALITY","textShapes":15}
+{"kind":"textbox","id":"sh/gr2587eh","slide":11,"text":"QUALITY","textPreview":"QUALITY","textChars":7,"textLines":1,"bbox":[72,42,1120,24]}
+{"kind":"textbox","id":"sh/fqtof2dw","slide":11,"text":"Verification and release status","textPreview":"Verification and release status","textChars":31,"textLines":1,"bbox":[72,72,1136,58]}
+{"kind":"textbox","id":"sh/epkn6hwb","slide":11,"text":"79 / 79","textPreview":"79 / 79","textChars":7,"textLines":1,"bbox":[76,180,360,90]}
+{"kind":"textbox","id":"sh/pgb6lwvy","slide":11,"text":"automated regression checks passed","textPreview":"automated regression checks passed","textChars":34,"textLines":1,"bbox":[80,276,380,34]}
+{"kind":"textbox","id":"sh/ov25crut","slide":11,"text":"Coverage includes Spotify parsing and sessions, cryptography, network safety, website audit behavior, telemetry persistence, API boundaries, and DNS email-policy analysis.","textPreview":"Coverage includes Spotify parsing and sessions, cryptography, network safety, website audit behavior, telemetry persistence, API boundari...","textChars":171,"textLines":1,"bbox":[80,338,470,136]}
+{"kind":"shape","id":"sh/3utojmd8","slide":11,"bbox":[630,166,520,74]}
+{"kind":"textbox","id":"sh/2tknahcn","slide":11,"text":"Release build","textPreview":"Release build","textChars":13,"textLines":1,"bbox":[658,185,250,28]}
+{"kind":"textbox","id":"sh/5kr69svu","slide":11,"text":"0 warnings, 0 errors","textPreview":"0 warnings, 0 errors","textChars":20,"textLines":1,"bbox":[910,185,210,28]}
+{"kind":"shape","id":"sh/4zi50ne9","slide":11,"bbox":[630,260,520,74]}
+{"kind":"textbox","id":"sh/ad4bu5o3","slide":11,"text":"Code formatting","textPreview":"Code formatting","textChars":15,"textLines":1,"bbox":[658,279,250,28]}
+{"kind":"textbox","id":"sh/bexsnapo","slide":11,"text":"Verified","textPreview":"Verified","textChars":8,"textLines":1,"bbox":[910,279,210,28]}
+{"kind":"shape","id":"sh/cz6twf69","slide":11,"bbox":[630,354,520,74]}
+{"kind":"textbox","id":"sh/x0fapk7e","slide":11,"text":"Published HTTP smoke suite","textPreview":"Published HTTP smoke suite","textChars":26,"textLines":1,"bbox":[658,373,300,28]}
+{"kind":"textbox","id":"sh/y1oby5oz","slide":11,"text":"Passed","textPreview":"Passed","textChars":6,"textLines":1,"bbox":[998,373,122,28]}
+{"kind":"shape","id":"sh/z2xsrapk","slide":11,"bbox":[630,470,520,112]}
+{"kind":"textbox","id":"sh/k36t0f65","slide":11,"text":"Public launch checkpoint","textPreview":"Public launch checkpoint","textChars":24,"textLines":1,"bbox":[658,490,360,28]}
+{"kind":"textbox","id":"sh/l4fatk7q","slide":11,"text":"Complete Google Search Console review and protect public diagnostic pages before broad promotion.","textPreview":"Complete Google Search Console review and protect public diagnostic pages before broad promotion.","textChars":97,"textLines":1,"bbox":[658,528,450,48]}
+{"kind":"textbox","id":"sh/m58b2pob","slide":11,"text":"DevPulse Version 1","textPreview":"DevPulse Version 1","textChars":18,"textLines":1,"bbox":[72,682,300,18]}
+{"kind":"textbox","id":"sh/76hsvupw","slide":11,"text":"11","textPreview":"11","textChars":2,"textLines":1,"bbox":[1160,682,48,18]}
+{"kind":"notes","id":"nt/5d1hvp","slide":11,"text":"The test count reflects the custom regression executable run for this release. The build, formatter, publish, and production HTTP smoke checks also passed. The Chrome Safe Browsing warning remains a launch blocker until Google identifies or clears the reported issue."}
+{"kind":"slide","id":"sl/9nd9ad","slide":12,"title":"NEXT STEPS","textShapes":19}
+{"kind":"textbox","id":"sh/14r6tc3u","slide":12,"text":"NEXT STEPS","textPreview":"NEXT STEPS","textChars":10,"textLines":1,"bbox":[72,42,1120,24]}
+{"kind":"textbox","id":"sh/e1gnixk3","slide":12,"text":"Presentation route and Version 2","textPreview":"Presentation route and Version 2","textChars":32,"textLines":1,"bbox":[72,72,1136,58]}
+{"kind":"textbox","id":"sh/z2por2lo","slide":12,"text":"Suggested live demonstration","textPreview":"Suggested live demonstration","textChars":28,"textLines":1,"bbox":[72,166,500,36]}
+{"kind":"textbox","id":"sh/ori5o725","slide":12,"text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[78,226,52,30]}
+{"kind":"textbox","id":"sh/9sr6xc3q","slide":12,"text":"Overview","textPreview":"Overview","textChars":8,"textLines":1,"bbox":[144,224,350,34]}
+{"kind":"textbox","id":"sh/m50nmxkz","slide":12,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[78,290,52,30]}
+{"kind":"textbox","id":"sh/nq9ov2lk","slide":12,"text":"Network Calculator","textPreview":"Network Calculator","textChars":18,"textLines":1,"bbox":[144,288,350,34]}
+{"kind":"textbox","id":"sh/wv2psr2h","slide":12,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[78,354,52,30]}
+{"kind":"textbox","id":"sh/xwb61wjm","slide":12,"text":"Website Audit","textPreview":"Website Audit","textChars":13,"textLines":1,"bbox":[144,352,350,34]}
+{"kind":"textbox","id":"sh/xw3udo36","slide":12,"text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[78,418,52,30]}
+{"kind":"textbox","id":"sh/cvutkj2l","slide":12,"text":"API Runner","textPreview":"API Runner","textChars":10,"textLines":1,"bbox":[144,416,350,34]}
+{"kind":"textbox","id":"sh/bu1sbelg","slide":12,"text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[78,482,52,30]}
+{"kind":"textbox","id":"sh/atsbi9kv","slide":12,"text":"Focus Lounge","textPreview":"Focus Lounge","textChars":12,"textLines":1,"bbox":[144,480,350,34]}
+{"kind":"shape","id":"sh/l03uh83i","slide":12,"bbox":[594,150,614,440]}
+{"kind":"textbox","id":"sh/kzuto32x","slide":12,"text":"Version 2 candidates","textPreview":"Version 2 candidates","textChars":20,"textLines":1,"bbox":[632,186,510,40]}
+{"kind":"textbox","id":"sh/jylcfylc","slide":12,"text":"SQL Server health and performance monitor\nIT asset inventory with IP address management\nAuthenticated remote monitoring agent\nIncident response and backup verification\nRole-based access for every diagnostic tool","textPreview":"SQL Server health and performance monitor | IT asset inventory with IP address management | Authenticated remote monitoring agent | Incid...","textChars":211,"textLines":5,"bbox":[632,258,510,262]}
+{"kind":"textbox","id":"sh/yxcbmtkr","slide":12,"text":"Version 1 establishes the platform and the safety model needed for these additions.","textPreview":"Version 1 establishes the platform and the safety model needed for these additions.","textChars":83,"textLines":1,"bbox":[632,532,510,44]}
+{"kind":"textbox","id":"sh/14ja543y","slide":12,"text":"DevPulse Version 1","textPreview":"DevPulse Version 1","textChars":18,"textLines":1,"bbox":[72,622,470,42]}
+{"kind":"textbox","id":"sh/03atcz2d","slide":12,"text":"DevPulse Version 1","textPreview":"DevPulse Version 1","textChars":18,"textLines":1,"bbox":[72,682,300,18]}
+{"kind":"textbox","id":"sh/snutszu9","slide":12,"text":"12","textPreview":"12","textChars":2,"textLines":1,"bbox":[1160,682,48,18]}
+{"kind":"notes","id":"nt/9nd9ad","slide":12,"text":"Close with a short live demonstration. The roadmap extends DevPulse from a single-host diagnostics workspace into a small IT operations platform. Do not promise a delivery date for Version 2 until scope and access controls are agreed."}

@@ -1,0 +1,77 @@
+@page "/credits"
+
+<PageTitle>Project Creators | DevPulse</PageTitle>
+
+<main class="credits-page">
+    <header class="credits-hero">
+        <p class="eyebrow">Project credits</p>
+        <h1>Meet the creators of DevPulse.</h1>
+        <p>DevPulse Version 1 was planned, developed, tested, and presented by a three-student team with guidance from a project advisor.</p>
+    </header>
+
+    <section class="credits-panel" aria-labelledby="creator-heading">
+        <div class="section-heading">
+            <div>
+                <span class="section-number">01</span>
+                <h2 id="creator-heading">Student team</h2>
+            </div>
+            <span class="member-count">3 creators</span>
+        </div>
+
+        <div class="student-grid">
+            @foreach (var member in StudentCreators)
+            {
+                <article class="creator-card">
+                    <span class="creator-avatar" aria-hidden="true">@member.Initials</span>
+                    <div>
+                        <p class="creator-role">@member.Role</p>
+                        @if (string.IsNullOrWhiteSpace(member.Name))
+                        {
+                            <span class="blank-name" aria-label="Name has not been added"></span>
+                        }
+                        else
+                        {
+                            <h3>@member.Name</h3>
+                        }
+                    </div>
+                </article>
+            }
+        </div>
+    </section>
+
+    <section class="advisor-panel" aria-labelledby="advisor-heading">
+        <div class="advisor-mark" aria-hidden="true">A</div>
+        <div class="advisor-copy">
+            <p class="eyebrow">Project guidance</p>
+            <h2 id="advisor-heading">Advisor</h2>
+            @if (string.IsNullOrWhiteSpace(ProjectAdvisor.Name))
+            {
+                <span class="blank-name advisor-blank" aria-label="Advisor name has not been added"></span>
+            }
+            else
+            {
+                <h3>@ProjectAdvisor.Name</h3>
+            }
+            <p>Academic guidance, project review, and support throughout the development of DevPulse.</p>
+        </div>
+    </section>
+
+    <aside class="credit-note">
+        <span aria-hidden="true">✦</span>
+        <p><strong>Built as a collaborative student project.</strong> The names are intentionally blank and can be added when the final project team is confirmed.</p>
+    </aside>
+</main>
+
+@code {
+    // EDIT THE FOUR NAMES BELOW. Keep each name inside the quotation marks.
+    private static readonly Creator[] StudentCreators =
+    [
+        new("Student 1", "", "01"),
+        new("Student 2", "", "02"),
+        new("Student 3", "", "03")
+    ];
+
+    private static readonly Creator ProjectAdvisor = new("Advisor", "", "A");
+
+    private sealed record Creator(string Role, string Name, string Initials);
+}

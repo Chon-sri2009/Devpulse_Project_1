@@ -1,0 +1,217 @@
+.credits-page {
+    display: grid;
+    gap: 24px;
+    max-width: 1180px;
+}
+
+.credits-hero {
+    max-width: 850px;
+    padding: 20px 0 8px;
+}
+
+.eyebrow {
+    margin: 0 0 8px;
+    color: #3976ed;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.credits-hero h1 {
+    margin: 0;
+    color: #172033;
+    font-size: clamp(2.2rem, 5vw, 4rem);
+    line-height: 1.04;
+    letter-spacing: -0.055em;
+}
+
+.credits-hero > p:last-child {
+    max-width: 720px;
+    margin: 18px 0 0;
+    color: #62718a;
+    font-size: 1.03rem;
+    line-height: 1.7;
+}
+
+.credits-panel,
+.advisor-panel {
+    border: 1px solid #dfe6f0;
+    border-radius: 18px;
+    background: #ffffff;
+    box-shadow: 0 12px 32px rgba(27, 39, 70, 0.05);
+}
+
+.credits-panel {
+    padding: 28px;
+}
+
+.section-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 22px;
+}
+
+.section-number {
+    display: block;
+    margin-bottom: 5px;
+    color: #3976ed;
+    font-size: 0.7rem;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+}
+
+.section-heading h2,
+.advisor-copy h2 {
+    margin: 0;
+    color: #172033;
+    font-size: 1.35rem;
+}
+
+.member-count {
+    padding: 7px 11px;
+    border-radius: 999px;
+    background: #eaf1ff;
+    color: #2863cc;
+    font-size: 0.76rem;
+    font-weight: 750;
+}
+
+.student-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.creator-card {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    min-height: 128px;
+    padding: 20px;
+    border: 1px solid #e6ebf2;
+    border-radius: 14px;
+    background: linear-gradient(145deg, #fbfcfe, #f3f7fd);
+}
+
+.creator-avatar,
+.advisor-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    color: #ffffff;
+    font-weight: 850;
+}
+
+.creator-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 15px;
+    background: #3976ed;
+    font-size: 0.86rem;
+}
+
+.creator-role {
+    margin: 0 0 11px;
+    color: #697890;
+    font-size: 0.78rem;
+    font-weight: 750;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.creator-card h3,
+.advisor-copy h3 {
+    margin: 0;
+    color: #172033;
+    font-size: 1.1rem;
+    overflow-wrap: anywhere;
+}
+
+.blank-name {
+    width: min(160px, 100%);
+    height: 22px;
+    display: block;
+    border-bottom: 2px solid #a8b6ca;
+}
+
+.advisor-panel {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 24px;
+    padding: 28px;
+    overflow: hidden;
+}
+
+.advisor-mark {
+    width: 88px;
+    height: 88px;
+    border-radius: 24px;
+    background: #13213a;
+    font-size: 1.55rem;
+}
+
+.advisor-copy .eyebrow {
+    margin-bottom: 5px;
+}
+
+.advisor-copy > p:last-child {
+    margin: 13px 0 0;
+    color: #62718a;
+    line-height: 1.55;
+}
+
+.advisor-blank {
+    width: min(280px, 100%);
+    margin-top: 13px;
+}
+
+.credit-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 13px;
+    padding: 17px 19px;
+    border: 1px solid #cfe1ff;
+    border-radius: 13px;
+    background: #edf4ff;
+    color: #29466f;
+}
+
+.credit-note > span {
+    color: #3976ed;
+    font-size: 1.2rem;
+}
+
+.credit-note p {
+    margin: 0;
+    line-height: 1.55;
+}
+
+@media (max-width: 900px) {
+    .student-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .credits-panel,
+    .advisor-panel {
+        padding: 21px;
+    }
+
+    .advisor-panel {
+        grid-template-columns: 1fr;
+    }
+
+    .advisor-mark {
+        width: 60px;
+        height: 60px;
+        border-radius: 17px;
+        font-size: 1.1rem;
+    }
+}
