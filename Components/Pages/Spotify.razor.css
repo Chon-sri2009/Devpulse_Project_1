@@ -1,4 +1,11 @@
 .spotify-page { display:flex; flex-direction:column; gap:24px; }
+.spotify-hero { order:0; }
+.spotify-page > .spotify-card { order:1; }
+.player-panel { order:2; }
+.created-library { order:3; }
+.saved-album-library { order:4; }
+.music-browser { order:5; }
+.browser-player-card { order:6; }
 .spotify-hero { max-width:760px; }
 .eyebrow,.connection-label { color:#167343; font-size:.75rem; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
 .spotify-hero h1 { font-size:clamp(2rem,4vw,2.8rem); letter-spacing:-.045em; }
