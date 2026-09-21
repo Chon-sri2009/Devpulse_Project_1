@@ -615,6 +615,93 @@ var tests = new List<(string Name, Func<Task> Run)>
         var result = await tools.LoadTestAsync(options.ApprovedUrls[0], 100, 100, default);
         Check(result.Requested == 3 && result.Succeeded == 3 && count == 3);
     }),
+    ("API runner sends a bounded request and evaluates assertions", async () =>
+    {
+        HttpRequestMessage? sent = null;
+        var options = new OperationsSettings { ApprovedUrls = ["https://api.example.test/items"] };
+        var runner = new ApiCollectionService(options, new TestHttpFactory(request =>
+        {
+            sent = request;
+            var response = new HttpResponseMessage(HttpStatusCode.Created)
+            {
+                Content = new StringContent("{\"result\":\"created\"}", System.Text.Encoding.UTF8, "application/json")
+            };
+            response.Headers.TryAddWithoutValidation("X-Request-Id", "test-1");
+            return response;
+        }));
+        var request = new ApiRequestDefinition
+        {
+            Name = "Create item", Method = "POST", Url = options.ApprovedUrls[0],
+            Headers = "Accept: application/json\nX-Test: yes", Body = "{\"name\":\"item\"}",
+            ExpectedStatus = 201, ExpectedContains = "created"
+        };
+        var result = await runner.ExecuteAsync(request, "Bearer secret-token", default);
+        Check(result.Passed && result.StatusCode == 201 && result.Body.Contains("created"));
+        Check(sent?.Method == HttpMethod.Post && sent.Headers.Authorization?.Scheme == "Bearer");
+        Check(sent!.Headers.TryGetValues("X-Test", out var custom) && custom.Single() == "yes");
+        Check(!result.Headers.Contains("Authorization", StringComparison.OrdinalIgnoreCase));
+    }),
+    ("API runner blocks an unapproved private target", async () =>
+    {
+        var count = 0;
+        var runner = new ApiCollectionService(new(), new TestHttpFactory(_ =>
+        { Interlocked.Increment(ref count); return new(HttpStatusCode.OK); }));
+        try
+        {
+            await runner.ExecuteAsync(new() { Name = "Private", Url = "http://127.0.0.1/admin" }, null, default);
+        }
+        catch (InvalidOperationException) { Check(count == 0); return; }
+        throw new InvalidOperationException("Expected private API target rejection");
+    }),
+    ("API runner allows unsafe methods only for exact owner-approved URLs", async () =>
+    {
+        var count = 0;
+        var runner = new ApiCollectionService(new(), new TestHttpFactory(_ =>
+        { Interlocked.Increment(ref count); return new(HttpStatusCode.NoContent); }));
+        try
+        {
+            await runner.ExecuteAsync(new()
+            {
+                Name = "Unapproved write", Method = "DELETE", Url = "https://93.184.216.34/items/1",
+                ExpectedStatus = 204
+            }, null, default);
+        }
+        catch (InvalidOperationException) { Check(count == 0); return; }
+        throw new InvalidOperationException("Expected unapproved write-method rejection");
+    }),
+    ("DNS email inspector recognizes MX, SPF, DMARC, and DKIM", async () =>
+    {
+        var inspector = new DnsEmailInspectorService(new TestHttpFactory(request =>
+        {
+            var query = request.RequestUri!.Query;
+            var answer = query.Contains("_dmarc.example.com", StringComparison.Ordinal)
+                ? "[{\"name\":\"_dmarc.example.com.\",\"type\":16,\"TTL\":300,\"data\":\"\\\"v=DMARC1; p=reject\\\"\"}]"
+                : query.Contains("default._domainkey.example.com", StringComparison.Ordinal)
+                    ? "[{\"name\":\"default._domainkey.example.com.\",\"type\":16,\"TTL\":300,\"data\":\"\\\"v=DKIM1; p=abc\\\"\"}]"
+                    : query.Contains("type=MX", StringComparison.Ordinal)
+                        ? "[{\"name\":\"example.com.\",\"type\":15,\"TTL\":300,\"data\":\"10 mail.example.com.\"}]"
+                        : query.Contains("type=TXT", StringComparison.Ordinal)
+                            ? "[{\"name\":\"example.com.\",\"type\":16,\"TTL\":300,\"data\":\"\\\"v=spf1 -all\\\"\"}]"
+                            : query.Contains("type=NS", StringComparison.Ordinal)
+                                ? "[{\"name\":\"example.com.\",\"type\":2,\"TTL\":300,\"data\":\"ns1.example.com.\"},{\"name\":\"example.com.\",\"type\":2,\"TTL\":300,\"data\":\"ns2.example.com.\"}]"
+                                : query.Contains("type=A&", StringComparison.Ordinal)
+                                    ? "[{\"name\":\"example.com.\",\"type\":1,\"TTL\":300,\"data\":\"93.184.216.34\"}]"
+                                    : "[]";
+            return JsonResponse($"{{\"Status\":0,\"Answer\":{answer}}}");
+        }));
+        var result = await inspector.InspectAsync("admin@example.com", "default", default);
+        Check(result.Domain == "example.com" && result.Records.Any(record => record.Type == "MX"));
+        Check(result.Findings.Any(finding => finding.Title == "SPF found" && finding.Level == "Good"));
+        Check(result.Findings.Any(finding => finding.Title == "DMARC enforcement enabled"));
+        Check(result.Findings.Any(finding => finding.Title == "DKIM key found"));
+    }),
+    ("DNS inspector validates and normalizes public domains", () =>
+    {
+        Check(DnsEmailInspectorService.NormalizeDomain("https://WWW.Example.COM/path") == "www.example.com");
+        try { DnsEmailInspectorService.NormalizeDomain("127.0.0.1"); }
+        catch (InvalidOperationException) { return Task.CompletedTask; }
+        throw new InvalidOperationException("Expected IP address rejection");
+    }),
     ("Alert delivery posts to an owner-configured HTTPS webhook", async () =>
     {
         var count = 0;

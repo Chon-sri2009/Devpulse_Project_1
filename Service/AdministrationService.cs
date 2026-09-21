@@ -69,7 +69,9 @@ public sealed class DiagnosticsGuardMiddleware(RequestDelegate next)
     {
         var restricted = context.Request.Path.StartsWithSegments("/operations")
             || context.Request.Path.StartsWithSegments("/telemetry") || context.Request.Path.StartsWithSegments("/tools")
-            || context.Request.Path.StartsWithSegments("/website-audit");
+            || context.Request.Path.StartsWithSegments("/website-audit")
+            || context.Request.Path.StartsWithSegments("/api-runner")
+            || context.Request.Path.StartsWithSegments("/dns-email");
         if (!settings.Enabled && restricted)
         { context.Response.StatusCode = StatusCodes.Status404NotFound; await context.Response.WriteAsync("Diagnostics are disabled."); return; }
         await next(context);

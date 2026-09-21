@@ -1,0 +1,64 @@
+@page "/dns-email"
+@using MiniProject_Everything_1.Services
+@inject DnsEmailInspectorService Inspector
+@rendermode InteractiveServer
+<PageTitle>DNS & Email Inspector | DevPulse</PageTitle>
+
+<div class="dns-page">
+    <header class="dns-hero"><p class="eyebrow">Domain diagnostics</p><h1>DNS &amp; Email Inspector</h1><p>Review public addressing, mail routing, sender authentication, and certificate-authority policy.</p></header>
+    @if (error is not null) { <p class="notice error" role="alert">@error</p> }
+    <section class="lookup-card">
+        <div class="lookup-grid">
+            <label>Domain or email address<input class="form-control" @bind="domain" @bind:event="oninput" placeholder="example.com or admin@example.com" /></label>
+            <label>DKIM selector <span>Optional</span><input class="form-control" @bind="selector" @bind:event="oninput" placeholder="default, google, selector1…" /></label>
+            <button class="action" disabled="@(busy || string.IsNullOrWhiteSpace(domain))" @onclick="Inspect">@(busy ? "Inspecting…" : "Inspect domain")</button>
+        </div>
+        <p>Queries public A, AAAA, NS, MX, TXT, CAA, DMARC, and optional DKIM records through Google Public DNS. It does not send email or connect to a mailbox.</p>
+    </section>
+
+    @if (report is not null)
+    {
+        <section class="summary-card">
+            <div><p class="overline">Inspection summary</p><h2>@report.Domain</h2><span>@report.Records.Count records · @report.DurationMs ms · @report.CheckedAt.ToLocalTime().ToString("g")</span></div>
+            <div class="score"><strong>@report.Findings.Count(finding => finding.Level == "Good")</strong><span>checks passed</span></div>
+        </section>
+        <section class="finding-grid">
+            @foreach (var finding in report.Findings)
+            {
+                <article class="finding @finding.Level.ToLowerInvariant()"><span class="finding-icon">@(finding.Level == "Good" ? "✓" : finding.Level == "Bad" ? "!" : "i")</span><div><strong>@finding.Title</strong><p>@finding.Detail</p></div></article>
+            }
+        </section>
+        <section class="records-card">
+            <div class="records-heading"><div><p class="overline">Raw public data</p><h2>DNS records</h2></div><span>TTL values are shown in seconds</span></div>
+            @if (report.Records.Count == 0) { <p class="empty-records">No records were returned for the inspected record types.</p> }
+            else
+            {
+                <div class="record-table">
+                    <div class="table-head"><span>Type</span><span>Name</span><span>TTL</span><span>Value</span></div>
+                    @foreach (var record in report.Records.OrderBy(record => RecordOrder(record.Type)).ThenBy(record => record.Name))
+                    {
+                        <div class="table-row"><span class="record-type">@record.Type</span><span>@record.Name</span><span>@record.Ttl</span><code>@record.Value</code></div>
+                    }
+                </div>
+            }
+        </section>
+    }
+</div>
+
+@code {
+    private string domain = "", selector = "";
+    private string? error;
+    private bool busy;
+    private DnsEmailInspection? report;
+
+    private async Task Inspect()
+    {
+        if (busy) return;
+        busy = true; error = null;
+        try { report = await Inspector.InspectAsync(domain, selector, default); }
+        catch (Exception ex) when (ex is not OperationCanceledException) { error = ex.Message; report = null; }
+        finally { busy = false; }
+    }
+
+    private static int RecordOrder(string type) => type switch { "A" => 0, "AAAA" => 1, "NS" => 2, "MX" => 3, "TXT" => 4, "CAA" => 5, _ => 9 };
+}

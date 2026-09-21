@@ -66,7 +66,7 @@ try {
     if ([int]$r.StatusCode -ne 404 -or !$r.Content.ReadAsStringAsync().GetAwaiter().GetResult().Contains('Page not found')) { throw '404 page failed.' }
     $r.Dispose()
     Write-Output 'PASS unknown route'
-    foreach ($path in @('/operations', '/telemetry', '/tools')) {
+    foreach ($path in @('/operations', '/telemetry', '/tools', '/api-runner', '/dns-email', '/website-audit')) {
         $r = $client.GetAsync($path).GetAwaiter().GetResult()
         if ([int]$r.StatusCode -ne 404) { throw "Production diagnostics exposed $path" }
         $r.Dispose()

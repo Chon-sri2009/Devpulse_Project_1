@@ -1,0 +1,139 @@
+@page "/api-runner"
+@using MiniProject_Everything_1.Services
+@inject ApiCollectionService RunnerService
+@inject DiagnosticToolsService Tools
+@rendermode InteractiveServer
+<PageTitle>API Runner | DevPulse</PageTitle>
+
+<div class="api-page">
+    <header class="api-hero">
+        <p class="eyebrow">Bounded API workspace</p>
+        <h1>API Collection Runner</h1>
+        <p>Build a small request collection, inspect responses, and verify status or body assertions.</p>
+    </header>
+
+    @if (error is not null) { <p class="notice error" role="alert">@error</p> }
+
+    <section class="api-layout">
+        <aside class="collection-panel">
+            <div class="panel-heading"><div><span class="overline">Collection</span><strong>@collection.Count / @ApiCollectionService.MaxRequestsPerRun requests</strong></div><button class="small-button" @onclick="NewRequest">New</button></div>
+            @if (collection.Count == 0)
+            {
+                <div class="empty-state"><strong>No saved requests</strong><span>Add the editor request to build this temporary collection.</span></div>
+            }
+            else
+            {
+                <div class="request-list">
+                    @foreach (var request in collection)
+                    {
+                        <button class="request-row @(ReferenceEquals(request, selected) ? "active" : "")" @onclick="() => SelectRequest(request)">
+                            <span class="method @request.Method.ToLowerInvariant()">@request.Method</span>
+                            <span><strong>@request.Name</strong><small>@DisplayHost(request.Url)</small></span>
+                        </button>
+                    }
+                </div>
+            }
+            <button class="action run-all" disabled="@(busy || !authorized || collection.Count == 0)" @onclick="RunCollection">Run collection</button>
+            <small class="retention-note">The collection and authorization value remain only in this live page session and are not written to disk.</small>
+        </aside>
+
+        <div class="editor-panel">
+            <div class="editor-title"><div><span class="overline">Request editor</span><h2>@(selected is null ? "New request" : selected.Name)</h2></div><div class="editor-actions"><button class="small-button" disabled="@(busy || collection.Count >= ApiCollectionService.MaxRequestsPerRun)" @onclick="AddRequest">@(selected is null ? "Add to collection" : "Duplicate")</button>@if(selected is not null){<button class="small-button danger" disabled="@busy" @onclick="RemoveRequest">Remove</button>}</div></div>
+            <div class="request-line">
+                <select @bind="draft.Method" aria-label="HTTP method">@foreach(var method in methods){<option value="@method">@method</option>}</select>
+                <input class="form-control" type="url" list="api-approved-urls" @bind="draft.Url" @bind:event="oninput" placeholder="https://api.example.com/v1/status" aria-label="API URL" />
+                <button class="action" disabled="@(busy || !authorized || string.IsNullOrWhiteSpace(draft.Url))" @onclick="RunCurrent">@(busy ? "Running…" : "Send")</button>
+            </div>
+            <datalist id="api-approved-urls">@foreach(var url in Tools.ApprovedUrls){<option value="@url"></option>}</datalist>
+            <label class="field">Request name<input class="form-control" maxlength="80" @bind="draft.Name" /></label>
+
+            <div class="editor-grid">
+                <label class="field">Custom headers <small>One per line: <code>Accept: application/json</code></small><textarea class="form-control code-input" @bind="draft.Headers" placeholder="Accept: application/json&#10;X-API-Key: value"></textarea></label>
+                <label class="field">Request body <small>Maximum 256 KB</small><textarea class="form-control code-input" @bind="draft.Body" placeholder='{"name":"DevPulse"}'></textarea></label>
+            </div>
+            <div class="option-grid">
+                <label class="field">Content type<input class="form-control" @bind="draft.ContentType" placeholder="application/json" /></label>
+                <label class="field">Expected status<input class="form-control" type="number" min="100" max="599" @bind="draft.ExpectedStatus" /></label>
+                <label class="field">Body must contain<input class="form-control" maxlength="256" @bind="draft.ExpectedContains" placeholder="Optional exact text" /></label>
+            </div>
+            <label class="field secret-field">Authorization header value <small>Transient and never copied into the collection, for example <code>Bearer …</code></small><div><input class="form-control" type="password" autocomplete="off" maxlength="4096" @bind="authorization" placeholder="Optional" /><button class="small-button" @onclick="ClearAuthorization">Clear</button></div></label>
+            <label class="permission-check"><input type="checkbox" @bind="authorized" /> I own this API or have permission to send these requests.</label>
+            <p class="safety-note">Redirects are not followed. Private targets are blocked unless the exact URL is owner-configured. POST, PUT, PATCH, and DELETE also require an exact <code>Operations:ApprovedUrls</code> entry. Each request has a 15-second timeout and a 1 MB response limit.</p>
+        </div>
+    </section>
+
+    @if (results.Count > 0)
+    {
+        <section class="results-section">
+            <div class="results-heading"><div><p class="overline">Latest run</p><h2>Responses</h2></div><button class="small-button" @onclick="results.Clear">Clear results</button></div>
+            @foreach (var result in results)
+            {
+                <details class="response-card" open>
+                    <summary><span class="result-state @(result.Passed ? "pass" : "fail")">@(result.Passed ? "PASS" : "FAIL")</span><strong>@result.Name</strong><span>@result.Method</span><span>HTTP @result.StatusCode</span><span>@result.DurationMs ms</span></summary>
+                    <div class="response-meta"><span><small>URL</small>@result.Url</span><span><small>Content type</small>@result.ContentType</span><span><small>Preview</small>@result.BytesRead.ToString("N0") bytes@(result.Truncated ? " · truncated" : "")</span></div>
+                    <div class="assertions">@foreach(var assertion in result.Assertions){<span>@assertion</span>}</div>
+                    @if (!string.IsNullOrWhiteSpace(result.Headers)) { <h3>Response headers</h3><pre>@result.Headers</pre> }
+                    <h3>Response body</h3><pre>@(string.IsNullOrEmpty(result.Body) ? "(empty response body)" : result.Body)</pre>
+                </details>
+            }
+        </section>
+    }
+</div>
+
+@code {
+    private static readonly string[] methods = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"];
+    private readonly List<ApiRequestDefinition> collection = [];
+    private readonly List<ApiResponseResult> results = [];
+    private ApiRequestDefinition draft = new();
+    private ApiRequestDefinition? selected;
+    private string authorization = "";
+    private string? error;
+    private bool busy, authorized;
+
+    protected override void OnInitialized()
+    {
+        draft.Url = Tools.ApprovedUrls.FirstOrDefault() ?? "https://api.github.com";
+        draft.Name = "API health";
+    }
+
+    private void NewRequest()
+    {
+        selected = null;
+        draft = new ApiRequestDefinition { Url = Tools.ApprovedUrls.FirstOrDefault() ?? "https://api.github.com" };
+        error = null;
+    }
+
+    private void AddRequest()
+    {
+        error = null;
+        if (collection.Count >= ApiCollectionService.MaxRequestsPerRun) { error = "This collection already contains the maximum of 10 requests."; return; }
+        if (string.IsNullOrWhiteSpace(draft.Name) || string.IsNullOrWhiteSpace(draft.Url)) { error = "Enter a request name and URL first."; return; }
+        var copy = draft.Copy();
+        if (selected is not null) copy.Name = copy.Name.EndsWith(" copy", StringComparison.OrdinalIgnoreCase) ? copy.Name : $"{copy.Name} copy";
+        collection.Add(copy);
+        selected = copy;
+        draft = copy;
+    }
+
+    private void SelectRequest(ApiRequestDefinition request) { selected = request; draft = request; error = null; }
+    private void RemoveRequest() { if (selected is null) return; collection.Remove(selected); NewRequest(); }
+    private void ClearAuthorization() => authorization = "";
+    private static string DisplayHost(string value) => Uri.TryCreate(value, UriKind.Absolute, out var uri) ? uri.Host : value;
+
+    private Task RunCurrent() => Run(async () => results.Insert(0, await RunnerService.ExecuteAsync(draft, authorization, default)));
+    private Task RunCollection() => Run(async () =>
+    {
+        results.Clear();
+        foreach (var request in collection)
+            results.Add(await RunnerService.ExecuteAsync(request, authorization, default));
+    });
+
+    private async Task Run(Func<Task> action)
+    {
+        if (busy) return;
+        busy = true; error = null;
+        try { await action(); }
+        catch (Exception ex) when (ex is not OperationCanceledException) { error = ex.Message; }
+        finally { busy = false; }
+    }
+}

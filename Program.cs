@@ -172,6 +172,12 @@ builder.Services.AddHttpClient("LoadTest", client => client.Timeout = TimeSpan.F
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddHttpClient("PublicLoadTest", client => client.Timeout = TimeSpan.FromSeconds(10))
     .ConfigurePrimaryHttpMessageHandler(() => PublicHttpTarget.CreateHandler(5));
+builder.Services.AddHttpClient("ApiRunnerApproved", client => client.Timeout = TimeSpan.FromSeconds(15))
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+builder.Services.AddHttpClient("ApiRunnerPublic", client => client.Timeout = TimeSpan.FromSeconds(15))
+    .ConfigurePrimaryHttpMessageHandler(() => PublicHttpTarget.CreateHandler(4));
+builder.Services.AddHttpClient("DnsInspector", client => client.Timeout = TimeSpan.FromSeconds(10))
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddHttpClient("WebsiteAudit", client => client.Timeout = TimeSpan.FromSeconds(20))
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddHttpClient("PublicWebsiteAudit", client => client.Timeout = TimeSpan.FromSeconds(20))
@@ -186,6 +192,8 @@ builder.Services.AddSingleton<TelemetryStore>();
 builder.Services.AddSingleton<AlertDeliveryService>();
 builder.Services.AddSingleton<NetworkDiagnosticsService>();
 builder.Services.AddSingleton<DiagnosticToolsService>();
+builder.Services.AddSingleton<ApiCollectionService>();
+builder.Services.AddSingleton<DnsEmailInspectorService>();
 builder.Services.AddSingleton<WebsiteAuditService>();
 builder.Services.AddSingleton<BrowserWebsiteAuditService>();
 builder.Services.AddSingleton<WebsiteMonitorState>();

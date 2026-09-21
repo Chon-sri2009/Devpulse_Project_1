@@ -21,6 +21,8 @@ Diagnostics describe the machine running DevPulse. A hosted deployment reports i
 - **Operations:** owner-allowlisted service watchlist plus bounded one-off public-host ping, DNS, TLS, and database connectivity checks, with live log tailing.
 - **Telemetry:** persisted metric history, request traces, threshold incidents, deployment identity, and optional OTLP export.
 - **Inspectors:** public-URL JSON explorer, SHA-256 file hashing, password-based AES-256-GCM file encryption/decryption, local JWT decoding, and a bounded HTTP load tester.
+- **API Collection Runner:** temporary multi-request collections with common HTTP methods, custom headers and bodies, transient authorization, response previews, and status/body assertions.
+- **DNS & Email Inspector:** public A, AAAA, NS, MX, TXT, CAA, SPF, DMARC, and selector-based DKIM inspection with configuration findings.
 - **Network Calculator:** IPv4 and IPv6 subnet planning, usable address ranges, CIDR/mask/wildcard conversion, VLSM allocation, route summarization, DHCP/firewall range counts, transfer-time and bandwidth-delay estimates, and MTU/MSS sizing.
 - **Website Audit:** bounded crawling, broken-link and asset checks, security/cache headers, response timing, JSON dataset validation, SEO checks, Lighthouse, axe accessibility, scripted browser journeys, desktop/mobile screenshots, visual regression, and scheduled uptime monitoring.
 - **Administration:** separate administrator cookie, process listing/termination, maintenance mode, audit history, and redacted diagnostics ZIP export.
@@ -95,7 +97,7 @@ dotnet run --launch-profile http
 
 Scans accept only the configured root, read metadata, skip links/junctions and inaccessible entries, and stop at 15 seconds, 100,000 entries or depth 64. Results explicitly report limits/skipped entries. Totals are logical sizes; hard links can be counted more than once. Configure a narrow trusted directory whose names and sizes may be shown to dashboard users.
 
-Production diagnostics are disabled by default. When disabled, `/operations`, `/telemetry`, and `/tools` return 404. Enable them only behind a private access gateway or when you intentionally want visitors to use the configured diagnostics. The administrator login protects termination, maintenance, audit, and export actions; Spotify login is separate and is not administrator authentication.
+Production diagnostics are disabled by default. When disabled, `/operations`, `/telemetry`, `/tools`, `/api-runner`, `/dns-email`, and `/website-audit` return 404. Enable them only behind a private access gateway or when you intentionally want visitors to use the configured diagnostics. The administrator login protects termination, maintenance, audit, and export actions; Spotify login is separate and is not administrator authentication.
 
 Configure the administrator password through user-secrets or the hosting secret manager—never in `appsettings.json`:
 
@@ -108,6 +110,10 @@ Scheduled watchlist targets, the TCP port scanner, and log files remain owner-co
 The JSON explorer accepts a user-entered public HTTP or HTTPS URL and uses configured URLs as suggestions. Its outbound client disables redirects, resolves and pins the destination address at connection time, and rejects loopback, private, link-local, and reserved targets to prevent server-side request forgery. Owner-approved URLs remain available for intentionally configured private services. JSON responses are limited to 2 MB. Log output and uploaded file contents are never included in request telemetry; uploaded files are processed in memory and are not stored.
 
 The mini load tester accepts public HTTP or HTTPS URLs with the same network protections and configured private-service exceptions. Users must acknowledge that they own or have permission to test the target. Each run is capped at 25 GET requests, five workers, and a 10-second client timeout; only one arbitrary public run can execute at a time across the application. These controls reduce accidental abuse but do not replace authentication or a private access gateway for a production diagnostics deployment.
+
+The API Collection Runner accepts up to ten temporary requests using GET, HEAD, POST, PUT, PATCH, DELETE, or OPTIONS. Arbitrary public destinations support the read-only methods; POST, PUT, PATCH, and DELETE require the exact endpoint in `Operations:ApprovedUrls`. Public destinations use the same pinned-address SSRF defenses, redirects are disabled, request bodies are capped at 256 KB, response previews at 1 MB, and requests at 15 seconds. Authorization values are password-masked, applied only to the current run, excluded from response output, and never written to disk. The collection itself lives only in the active Blazor circuit and disappears when the page is reloaded. Custom header values are also temporary and may contain sensitive API keys, so do not share screenshots of the editor.
+
+The DNS & Email Inspector performs read-only public DNS-over-HTTPS queries through Google Public DNS. It reports addressing, name servers, mail exchange, SPF, DMARC, optional selector-based DKIM, and CAA records. A missing or weak record is guidance rather than proof that a domain or mailbox is compromised; the tool never connects to a mailbox and never sends email.
 
 The Operations page accepts a one-off public domain, IP address, or URL for a single Ping, DNS resolution, or port-443 TLS inspection. It also accepts one public host and port for a TCP or Redis health check. Private and reserved destinations are blocked unless the exact target is owner-configured, and the UI requires a permission acknowledgment for active network checks. Scheduled checks and broad TCP scanning remain allowlisted.
 
