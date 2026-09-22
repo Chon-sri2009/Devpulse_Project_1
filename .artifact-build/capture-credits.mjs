@@ -9,4 +9,8 @@ const browser = await chromium.launch({
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 await page.goto("http://127.0.0.1:5214/credits", { waitUntil: "networkidle", timeout: 30000 });
 await page.screenshot({ path: ".artifact-build/screenshots/credits.png", fullPage: true });
+
+const mobilePage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+await mobilePage.goto("http://127.0.0.1:5214/credits", { waitUntil: "networkidle", timeout: 30000 });
+await mobilePage.screenshot({ path: ".artifact-build/screenshots/credits-mobile.png", fullPage: true });
 await browser.close();

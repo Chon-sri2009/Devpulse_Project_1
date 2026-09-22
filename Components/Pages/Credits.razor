@@ -21,9 +21,22 @@
         <div class="student-grid">
             @foreach (var member in StudentCreators)
             {
-                <article class="creator-card">
-                    <span class="creator-avatar" aria-hidden="true">@member.Initials</span>
-                    <div>
+                <article class="creator-card @(member.PhotoUrl is not null ? "featured-creator" : "supporting-creator")">
+                    @if (member.PhotoUrl is not null)
+                    {
+                        <div class="creator-photo-frame">
+                            <img class="creator-photo" src="@member.PhotoUrl" alt="@member.PhotoAlt" fetchpriority="high" />
+                        </div>
+                    }
+                    else
+                    {
+                        <span class="creator-avatar" aria-hidden="true">@member.Initials</span>
+                    }
+                    <div class="creator-copy">
+                        @if (member.PhotoUrl is not null)
+                        {
+                            <span class="lead-badge">Project creator</span>
+                        }
                         <p class="creator-role">@member.Role</p>
                         @if (string.IsNullOrWhiteSpace(member.Name))
                         {
@@ -32,6 +45,10 @@
                         else
                         {
                             <h3>@member.Name</h3>
+                        }
+                        @if (member.PhotoUrl is not null)
+                        {
+                            <p class="creator-summary">Designed, developed, tested, documented, and prepared DevPulse Version 1 for deployment.</p>
                         }
                     </div>
                 </article>
@@ -66,12 +83,12 @@
     // Edit the team names and roles below when the project membership changes.
     private static readonly Creator[] StudentCreators =
     [
-        new("Project lead · Design, development, testing, and documentation", "Mr. Chonlapol Srichayech", "01"),
-        new("Presentation team", "Miss Kanchanit Klanpram", "02"),
-        new("Presentation team", "Miss Natthachaporn Anekchaiyaporn", "03")
+        new("Project lead · Design, development, testing, and documentation", "Mr. Chonlapol Srichayech", "01", "/images/chonlapol-srichayech.jpg", "Mr. Chonlapol Srichayech holding a medal beside a WorldSkills Thailand flag"),
+        new("Presentation team", "Miss Kanchanit Klanpram", "02", null, null),
+        new("Presentation team", "Miss Natthachaporn Anekchaiyaporn", "03", null, null)
     ];
 
-    private static readonly Creator ProjectAdvisor = new("Advisor", "Mr. Suppakit Kongthong", "A");
+    private static readonly Creator ProjectAdvisor = new("Advisor", "Mr. Suppakit Kongthong", "A", null, null);
 
-    private sealed record Creator(string Role, string Name, string Initials);
+    private sealed record Creator(string Role, string Name, string Initials, string? PhotoUrl, string? PhotoAlt);
 }
