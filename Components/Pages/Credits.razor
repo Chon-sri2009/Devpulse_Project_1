@@ -5,17 +5,17 @@
 <main class="credits-page">
     <header class="credits-hero">
         <p class="eyebrow">Project credits</p>
-        <h1>Meet the creators of DevPulse.</h1>
-        <p>DevPulse Version 1 was planned, developed, tested, and presented by a three-student team with guidance from a project advisor.</p>
+        <h1>Meet Team 3 Devils.</h1>
+        <p>DevPulse Version 1 was created and developed by Mr. Chonlapol Srichayech, with the full student team participating in the project presentation and guidance provided by the project advisor.</p>
     </header>
 
     <section class="credits-panel" aria-labelledby="creator-heading">
         <div class="section-heading">
             <div>
                 <span class="section-number">01</span>
-                <h2 id="creator-heading">Student team</h2>
+                <h2 id="creator-heading">Team 3 Devils</h2>
             </div>
-            <span class="member-count">3 creators</span>
+            <span class="member-count">3 members</span>
         </div>
 
         <div class="student-grid">
@@ -58,20 +58,20 @@
 
     <aside class="credit-note">
         <span aria-hidden="true">✦</span>
-        <p><strong>Built as a collaborative student project.</strong> The names are intentionally blank and can be added when the final project team is confirmed.</p>
+        <p><strong>Created for Team 3 Devils.</strong> Development was completed by the project lead, with the student team contributing to the presentation.</p>
     </aside>
 </main>
 
 @code {
-    // EDIT THE FOUR NAMES BELOW. Keep each name inside the quotation marks.
+    // Edit the team names and roles below when the project membership changes.
     private static readonly Creator[] StudentCreators =
     [
-        new("Student 1", "", "01"),
-        new("Student 2", "", "02"),
-        new("Student 3", "", "03")
+        new("Project lead · Design, development, testing, and documentation", "Mr. Chonlapol Srichayech", "01"),
+        new("Presentation team", "Miss Kanchanit Klanpram", "02"),
+        new("Presentation team", "Miss Natthachaporn Anekchaiyaporn", "03")
     ];
 
-    private static readonly Creator ProjectAdvisor = new("Advisor", "", "A");
+    private static readonly Creator ProjectAdvisor = new("Advisor", "Mr. Suppakit Kongthong", "A");
 
     private sealed record Creator(string Role, string Name, string Initials);
 }
