@@ -151,6 +151,12 @@ public sealed record SpotifyPlayback(string Title, string Creator, string? Image
             ? queue.EnumerateArray().Select(x => ParseTrack(x, null, null)).Where(x => x is not null).Cast<SpotifyTrack>().Take(20).ToList()
             : [];
     }
+    public static bool QueueHasCurrentAlbum(JsonElement json, string albumUri)
+    {
+        if (!SpotifyAlbum.IsSafeUri(albumUri)) return false;
+        var current = Property(json, "currently_playing");
+        return Text(Property(current, "album"), "uri") == albumUri;
+    }
     private static SpotifyTrackPage ParseTrackContainer(JsonElement container, string title, string? contextUri,
         bool wrapped, string? fallbackAlbum, string? fallbackImage)
     {

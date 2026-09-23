@@ -628,6 +628,7 @@
         albumMessage = $"Starting {album.Name}…";
         nextSync = DateTimeOffset.MinValue;
         StateHasChanged();
+        await LoadQueueAfterPlaybackStart(album.Name, album.Uri);
     }
 
     private async Task PlayPlaylist(SpotifyPlaylist playlist)
@@ -645,6 +646,7 @@
         playlistMessage = $"Starting {playlist.Name}…";
         nextSync = DateTimeOffset.MinValue;
         StateHasChanged();
+        await LoadQueueAfterPlaybackStart(playlist.Name);
     }
 
     private static string PlaylistKind(SpotifyPlaylist playlist) => playlist.Collaborative
@@ -686,16 +688,31 @@
         finally { tracksLoading = false; if (!lifetime.IsCancellationRequested) await InvokeAsync(StateHasChanged); }
     }
 
-    private async Task LoadQueue()
+    private Task LoadQueue() => LoadQueueAfterPlaybackStart();
+
+    private async Task LoadQueueAfterPlaybackStart(string? startedName = null, string? expectedAlbumUri = null)
     {
         if (tracksLoading || user is null) return;
         trackSource = "queue"; tracksLoading = true; trackError = null; trackMessage = null; StateHasChanged();
         try
         {
-            var result = await Player.GetQueueAsync(user, lifetime.Token);
-            if (!Accept(result)) { trackError = result.Error; return; }
-            var items = result.Data is { } data ? SpotifyPlayback.ParseQueue(data) : [];
+            SpotifyReply? result = null;
+            var attempts = expectedAlbumUri is null ? 1 : 3;
+            for (var attempt = 0; attempt < attempts; attempt++)
+            {
+                if (startedName is not null)
+                    await Task.Delay(attempt == 0 ? 650 : 500, lifetime.Token);
+                result = await Player.GetQueueAsync(user, lifetime.Token);
+                if (!Accept(result)) { trackError = result.Error; return; }
+                if (expectedAlbumUri is null || result.Data is not { } queueData
+                    || SpotifyPlayback.QueueHasCurrentAlbum(queueData, expectedAlbumUri)) break;
+            }
+            var items = result?.Data is { } data ? SpotifyPlayback.ParseQueue(data) : [];
             trackPage = new(items, 0, items.Count, items.Count, "Up next");
+            if (startedName is not null)
+                trackMessage = items.Count > 0
+                    ? $"Playing {startedName}. The upcoming queue is synchronized."
+                    : $"Playing {startedName}. Spotify has not returned any upcoming songs yet; select View queue to retry.";
         }
         catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
         catch (Exception ex) { Logger.LogWarning("Spotify queue failed: {ExceptionType}", ex.GetType().Name); trackError = "The playback queue could not be loaded."; }

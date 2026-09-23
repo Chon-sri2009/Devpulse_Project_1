@@ -14,10 +14,18 @@
         <label>Website URL <input class="form-control" type="url" @bind="target" @bind:event="oninput" placeholder="https://example.com/" /></label>
         <label class="permission"><input type="checkbox" @bind="authorized" /> I own this website or have permission to audit it.</label>
         <div class="actions">
-            <button class="action" disabled="@(busy || !authorized)" @onclick="RunHttpAudit">Run website audit</button>
-            <button class="action secondary" disabled="@(busy || !authorized || !BrowserAudits.Enabled)" @onclick="RunBrowserAudit">Run browser + Lighthouse</button>
-            <button class="action outline" disabled="@(busy || !authorized || !BrowserAudits.Enabled)" @onclick="UpdateBaseline">Save current visual baseline</button>
+            <button class="action" disabled="@busy" @onclick="RunHttpAudit">Run website audit</button>
+            <button class="action secondary" disabled="@busy" @onclick="RunBrowserAudit">Run browser + Lighthouse</button>
+            <button class="action outline" disabled="@busy" @onclick="UpdateBaseline">Save current visual baseline</button>
         </div>
+        @if (!authorized)
+        {
+            <p class="action-hint">Confirm that you are authorized to test the website before starting an audit.</p>
+        }
+        else if (!BrowserAudits.Enabled)
+        {
+            <p class="action-hint warning">Browser audits are disabled for this deployment. Set <code>WebsiteAudit__BrowserEnabled=true</code> and redeploy.</p>
+        }
         <small>The crawler is limited to configured safety caps. Browser audits run one at a time and may take up to two minutes.</small>
     </section>
 
@@ -108,10 +116,21 @@
     private readonly CancellationTokenSource cancellation=new();
     private string target="";private bool authorized,busy;private string? error;private WebsiteAuditReport? report;private BrowserAuditReport? browser;
     protected override void OnInitialized()=>target=Audits.DefaultUrl;
-    private async Task Run(Func<Task> action){if(busy)return;busy=true;error=null;try{await action();}catch(Exception ex)when(ex is not OperationCanceledException){error=ex.Message;}finally{busy=false;}}
+    private async Task Run(Func<Task> action, bool browserRequired=false)
+    {
+        if(busy)return;
+        error=null;
+        if(!authorized){error="Confirm that you own this website or have permission to audit it.";return;}
+        if(!Uri.TryCreate(target,UriKind.Absolute,out var uri)||uri.Scheme is not ("http" or "https"))
+        {error="Enter a complete HTTP or HTTPS website URL.";return;}
+        if(browserRequired&&!BrowserAudits.Enabled)
+        {error="Browser audits are disabled for this deployment. Enable WebsiteAudit__BrowserEnabled and redeploy.";return;}
+        busy=true;
+        try{await action();}catch(Exception ex)when(ex is not OperationCanceledException){error=ex.Message;}finally{busy=false;}
+    }
     private Task RunHttpAudit()=>Run(async()=>report=await Audits.AuditAsync(target,cancellation.Token));
-    private Task RunBrowserAudit()=>Run(async()=>browser=await BrowserAudits.RunAsync(target,false,cancellation.Token));
-    private Task UpdateBaseline()=>Run(async()=>browser=await BrowserAudits.RunAsync(target,true,cancellation.Token));
+    private Task RunBrowserAudit()=>Run(async()=>browser=await BrowserAudits.RunAsync(target,false,cancellation.Token),browserRequired:true);
+    private Task UpdateBaseline()=>Run(async()=>browser=await BrowserAudits.RunAsync(target,true,cancellation.Token),browserRequired:true);
     private static string Artifact(string name)=>$"/website-audit/artifacts/{Uri.EscapeDataString(name)}";
     private static string Empty(string value)=>string.IsNullOrWhiteSpace(value)?"Not supplied":value;
     private static string FormatBytes(long bytes)=>bytes switch{>=1048576=>$"{bytes/1048576d:F1} MB",>=1024=>$"{bytes/1024d:F1} KB",_=>$"{bytes} B"};

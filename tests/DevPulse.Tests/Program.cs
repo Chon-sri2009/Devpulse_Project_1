@@ -165,11 +165,13 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("Liked songs and queue tracks parse their different response shapes", () =>
     {
         using var likedJson = JsonDocument.Parse("""{"offset":0,"limit":20,"total":1,"items":[{"added_at":"2026-01-01T00:00:00Z","track":{"name":"Liked","uri":"spotify:track:LIKED1","artists":[{"name":"Artist"}],"album":{"name":"Album"},"duration_ms":60000}}]}""");
-        using var queueJson = JsonDocument.Parse("""{"queue":[{"name":"Next","uri":"spotify:track:NEXT1","artists":[{"name":"Artist"}],"album":{"name":"Album"},"duration_ms":90000},{"name":"Unsafe","uri":"https://attacker.example"}]}""");
+        using var queueJson = JsonDocument.Parse("""{"currently_playing":{"name":"Current","uri":"spotify:track:CURRENT1","album":{"name":"Album","uri":"spotify:album:ALBUM1"}},"queue":[{"name":"Next","uri":"spotify:track:NEXT1","artists":[{"name":"Artist"}],"album":{"name":"Album"},"duration_ms":90000},{"name":"Unsafe","uri":"https://attacker.example"}]}""");
         var liked = SpotifyPlayback.ParseSavedTracks(likedJson.RootElement);
         var queue = SpotifyPlayback.ParseQueue(queueJson.RootElement);
         Check(liked.Items.Count == 1 && liked.Items[0].Name == "Liked" && liked.Total == 1);
         Check(queue.Count == 1 && queue[0].Name == "Next");
+        Check(SpotifyPlayback.QueueHasCurrentAlbum(queueJson.RootElement, "spotify:album:ALBUM1"));
+        Check(!SpotifyPlayback.QueueHasCurrentAlbum(queueJson.RootElement, "spotify:album:OTHER1"));
         return Task.CompletedTask;
     }),
     ("Exact track playback supports standalone and album context", async () =>
